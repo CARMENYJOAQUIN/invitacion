@@ -14,7 +14,6 @@
 </head>
 <body class="bg-gray-50 text-gray-800 min-h-screen p-4 md:p-8">
 
-    <!-- Pantalla de Login -->
     <div id="login-screen" class="max-w-md mx-auto mt-20 bg-white p-8 rounded-3xl shadow-xl border border-gray-100">
         <h2 class="text-2xl font-bold text-center mb-6 text-gray-900">Panel de Invitados </h2>
         <div class="space-y-4">
@@ -28,10 +27,8 @@
         </div>
     </div>
 
-    <!-- Pantalla del Panel de Datos -->
     <div id="admin-panel" class="max-w-6xl mx-auto hidden space-y-6">
         
-        <!-- Cabecera con la tipografía elegante Carmen y Joaquin -->
         <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-white p-6 rounded-3xl shadow-sm border border-gray-100">
             <div>
                 <h1 class="font-script text-5xl text-gray-900 leading-tight">Carmen y Joaquin</h1>
@@ -44,7 +41,6 @@
             </div>
         </div>
 
-        <!-- Tarjetas de Resumen -->
         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             <div class="bg-white p-6 rounded-3xl border border-gray-100 shadow-sm">
                 <p class="text-xs font-bold text-gray-400 uppercase tracking-wider">Total Adultos</p>
@@ -64,7 +60,6 @@
             </div>
         </div>
 
-        <!-- Tabla de Datos -->
         <div class="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden">
             <div class="overflow-x-auto">
                 <table class="w-full text-left border-collapse">
@@ -78,8 +73,7 @@
                         </tr>
                     </thead>
                     <tbody id="tabla-cuerpo" class="divide-y divide-gray-100 text-sm text-gray-700">
-                        <!-- Los datos se cargan aquí -->
-                    </tbody>
+                        </tbody>
                 </table>
             </div>
         </div>
@@ -87,29 +81,21 @@
 
 <script>
     // 
-    const HASH_SECRETO = "70c48e833446927d3b50875e38148b598d9ba8051772590623a3b50e41f92e7c";
+    const CLAVE_OCULTA = "Ym9kYTIwMjY=";
 
-    // Las credenciales de Supabase se montan en memoria solo si la contraseña es correcta
     let supabaseClient = null;
 
-    // Función matemática para procesar lo que escribe el usuario
-    async function calcularSHA256(texto) {
-        const encoder = new TextEncoder();
-        const data = encoder.encode(texto);
-        const buffer = await crypto.subtle.digest('SHA-256', data);
-        return Array.from(new Uint8Array(buffer)).map(b => b.toString(16).padStart(2, '0')).join('');
-    }
-
-    async function verificarPassword() {
+    function verificarPassword() {
         const input = document.getElementById('password-input').value;
-        const inputHash = await calcularSHA256(input);
+        
+        // Convertimos lo que escribe el usuario al mismo formato oculto
+        const inputCodificado = btoa(input);
 
-        if (inputHash === HASH_SECRETO) {
-            // Desbloqueamos el panel visualmente
+        if (inputCodificado === CLAVE_OCULTA) {
             document.getElementById('login-screen').classList.add('hidden');
             document.getElementById('admin-panel').classList.remove('hidden');
             
-            // Inicializamos Supabase de manera segura en este preciso instante
+            // Las credenciales solo se crean en la memoria del navegador tras acertar la clave
             const u = "https://" + "awmpaldghsbweifiaudc" + ".supabase.co";
             const k = "sb_publishable_" + "O-MKgu_IQ68BEftpLKPKfQ_yu_hiAnN";
             supabaseClient = supabase.createClient(u, k);
