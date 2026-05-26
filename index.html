@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html class="light" lang="es">
+<head>
+    <meta charset="utf-8"/>
+    <meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0" name="viewport"/>
+    <title>Carmen y Joaquin INVITACION</title>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;700&family=Great+Vibes&display=swap" rel="stylesheet"/>
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght@400" rel="stylesheet"/>
+    <script src="https://cdn.tailwindcss.com?plugins=forms"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#6dec13",
+                        "primary-content": "#182210",
+                        "text-main": "#141811",
+                        "text-subtle": "#728961",
+                        "border-color": "#e0e6db",
+                    },
+                    fontFamily: {
+                        "display": ["Plus Jakarta Sans", "sans-serif"],
+                        "script": ["Great Vibes", "cursive"],
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        input, select { font-size: 16px !important; }
+        .animate-fade-in { animation: fadeIn 0.6s ease-out forwards; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+        .hidden { display: none; }
+        
+        body {
+            background-image: linear-gradient(to bottom, rgba(0,0,0,0.4), rgba(0,0,0,0.4)), 
+                            url('https://lh3.googleusercontent.com/p/AF1QipM8wEQMVse12SBfdi9emGJZ0DqDpUiD9puA4BV5=s680-w680-h510-rw');
+            background-size: cover;
+            background-position: center;
+            background-attachment: fixed;
+            background-repeat: no-repeat;
+        }
+
+        .glass-card {
+            background: rgba(255, 255, 255, 0.90);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+        }
+
+        .menu-select {
+            appearance: none;
+            background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%23728961' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e");
+            background-position: right 0.8rem center;
+            background-repeat: no-repeat;
+            background-size: 1.2em 1.2em;
+        }
+
+        #menu-details {
+            transition: max-height 0.4s ease-in-out, opacity 0.3s ease-in-out;
+            max-height: 0;
+            opacity: 0;
+            overflow: hidden;
+        }
+        #menu-details.open {
+            max-height: 500px;
+            opacity: 1;
+        }
+    </style>
+</head>
+<body class="font-display text-text-main antialiased min-h-screen flex flex-col items-center p-4">
+
+<main class="w-full max-w-md my-6 space-y-6">
+    
+    <div class="relative w-full h-64 rounded-[2.5rem] overflow-hidden shadow-2xl animate-fade-in">
+        <div class="absolute inset-0 bg-cover bg-center" style="background-image: url('https://lh3.googleusercontent.com/d/1JVd7vGavx48niliDYWljtZ7ZeFpCl7kS');">
+            <div class="absolute inset-0 bg-black/30"></div>
+        </div>
+        <div class="absolute inset-0 flex flex-col justify-center items-center p-6 text-center">
+            <h1 class="font-script text-6xl text-white drop-shadow-lg mb-2">Carmen y Joaquin</h1><br>
+            <p class="text-white/90 font-bold tracking-[0.2em] uppercase text-[10px]">Jueves 08 Octubre 2026  <br>Hotel Envía Almería Spa & Golf <br> Casa Mendoza</p>
+        </div>
+    </div>
+
+    <div id="form-container" class="glass-card rounded-[2.5rem] p-8 space-y-8 shadow-2xl animate-fade-in" style="animation-delay: 0.2s;">
+        <div class="text-center">
+            <h2 class="text-2xl font-bold">Confirmar Asistencia</h2>
+            <p class="text-text-subtle text-sm mt-1 font-medium">El evento empieza a las 14:00</p>
+        </div>
+
+        <div class="border border-border-color rounded-2xl overflow-hidden bg-white/50">
+            <button type="button" onclick="toggleMenuDetails()" class="w-full h-14 px-5 flex items-center justify-between text-text-subtle font-semibold text-sm hover:bg-white transition-colors">
+                <div class="flex items-center gap-2">
+                    <span class="material-symbols-outlined text-xl">restaurant_menu</span>
+                    <span>Ver opciones de menú</span>
+                </div>
+                <span id="menu-arrow" class="material-symbols-outlined transition-transform duration-300">keyboard_arrow_down</span>
+            </button>
+            
+            <div id="menu-details" class="px-5 pb-5 space-y-4 border-t border-gray-100 hidden bg-white/30">
+                <div class="pt-4">
+                    <span class="inline-block bg-text-subtle/10 text-text-subtle text-[11px] font-bold px-2.5 py-1 rounded-md uppercase tracking-wider mb-2">Pescado</span>
+                    <p class="text-xs font-bold uppercase text-text-main leading-relaxed">Lomo de Bacalao</p>
+                    <p class="text-[11px] text-text-subtle uppercase leading-normal">Confitado a baja temperatura con salsa de pimientos y patatas pont neuf</p>
+                </div>
+                <div class="border-t border-dashed border-gray-200 pt-3">
+                    <span class="inline-block bg-text-subtle/10 text-text-subtle text-[11px] font-bold px-2.5 py-1 rounded-md uppercase tracking-wider mb-2">Carne</span>
+                    <p class="text-xs font-bold uppercase text-text-main leading-relaxed">Solomillo de Cerdo Ibérico</p>
+                    <p class="text-[11px] text-text-subtle uppercase leading-normal">Albardado con salsa de oporto y patatas asadas</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="space-y-6">
+            <div class="space-y-2">
+                <span class="text-[10px] font-bold text-text-subtle uppercase tracking-widest ml-1">Invitado Principal</span>
+                <div class="flex gap-2">
+                    <input id="name1" type="text" class="flex-1 rounded-2xl border-gray-200 h-14 px-4 focus:ring-primary focus:border-primary shadow-sm min-w-0" placeholder="Nombre completo">
+                    <select id="menu1" class="w-28 rounded-2xl border-gray-200 h-14 pl-3 pr-6 focus:ring-primary focus:border-primary shadow-sm menu-select text-sm shrink-0 bg-white">
+                        <option value="Carne">Carne</option>
+                        <option value="Pescado">Pescado</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="space-y-2">
+                <span class="text-[10px] font-bold text-text-subtle uppercase tracking-widest ml-1">Acompañante (Opcional)</span>
+                <div class="flex gap-2">
+                    <input id="name2" type="text" class="flex-1 rounded-2xl border-gray-200 h-14 px-4 focus:ring-primary focus:border-primary shadow-sm min-w-0" placeholder="Nombre completo">
+                    <select id="menu2" class="w-28 rounded-2xl border-gray-200 h-14 pl-3 pr-6 focus:ring-primary focus:border-primary shadow-sm menu-select text-sm shrink-0 bg-white">
+                        <option value="Carne">Carne</option>
+                        <option value="Pescado">Pescado</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="space-y-2">
+                <span class="text-[10px] font-bold text-text-subtle uppercase tracking-widest ml-1 mb-1 block">¿Venís con niños?</span>
+                <div class="flex items-center justify-between border border-gray-200 bg-white h-14 px-4 rounded-2xl shadow-sm">
+                    <span class="text-gray-500 font-medium text-sm">Número de niños</span>
+                    <div class="flex items-center gap-4">
+                        <button type="button" onclick="cambiarNinos(-1)" class="w-9 h-9 border border-gray-200 rounded-xl flex items-center justify-center bg-gray-50 hover:bg-gray-100 active:scale-90 transition-all font-bold text-text-main">-</button>
+                        <span id="ninos-counter" class="font-bold text-lg w-4 text-center">0</span>
+                        <button type="button" onclick="cambiarNinos(1)" class="w-9 h-9 border border-gray-200 rounded-xl flex items-center justify-center bg-gray-50 hover:bg-gray-100 active:scale-90 transition-all font-bold text-text-main">+</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <button id="btn-enviar" onclick="enviarFormulario()" class="w-full bg-primary text-primary-content font-bold text-lg h-16 rounded-2xl shadow-xl shadow-primary/40 flex items-center justify-center gap-3 active:scale-95 transition-all">
+            <span>Enviar Confirmación</span>
+            <span class="material-symbols-outlined">send</span>
+        </button>
+    </div>
+
+    <div id="success-container" class="hidden glass-card rounded-[2.5rem] p-10 flex flex-col items-center justify-center text-center space-y-6 shadow-2xl animate-fade-in">
+        <div class="w-20 h-20 bg-primary/20 rounded-full flex items-center justify-center">
+            <span class="material-symbols-outlined text-primary text-5xl">check_circle</span>
+        </div>
+        <div class="space-y-2">
+            <h2 class="text-3xl font-bold text-text-main">¡Muchas Gracias!</h2>
+            <p class="text-text-subtle font-script text-5xl pt-2">¡Nos vemos pronto!</p>
+        </div>
+        <button onclick="resetForm()" class="mt-4 px-8 h-12 border-2 border-primary text-primary-content font-bold rounded-xl flex items-center gap-2 active:scale-95 transition-all">
+            <span class="material-symbols-outlined text-sm">arrow_back</span>
+            <span>Volver</span>
+        </button>
+    </div>
+</main>
+
+<script>
+    let ninosCount = 0;
+
+    function toggleMenuDetails() {
+        const details = document.getElementById('menu-details');
+        const arrow = document.getElementById('menu-arrow');
+        
+        if (details.classList.contains('hidden')) {
+            details.classList.remove('hidden');
+            setTimeout(() => {
+                details.classList.add('open');
+                arrow.style.transform = 'rotate(180deg)';
+            }, 10);
+        } else {
+            details.classList.remove('open');
+            arrow.style.transform = 'rotate(0deg)';
+            setTimeout(() => {
+                details.classList.add('hidden');
+            }, 400);
+        }
+    }
+
+    function cambiarNinos(valor) {
+        ninosCount += valor;
+        if (ninosCount < 0) ninosCount = 0;
+        document.getElementById('ninos-counter').innerText = ninosCount;
+    }
+
+    async function enviarFormulario() {
+        const btn = document.getElementById('btn-enviar');
+        const name1 = document.getElementById('name1').value.trim();
+        const menu1 = document.getElementById('menu1').value;
+        const name2 = document.getElementById('name2').value.trim();
+        const menu2 = document.getElementById('menu2').value;
+
+        if(!name1) {
+            alert("Por favor, introduce al menos el nombre del invitado principal.");
+            return;
+        }
+
+        btn.disabled = true;
+        btn.innerHTML = '<span class="animate-spin material-symbols-outlined">progress_activity</span>';
+
+        // Tus credenciales reales ya vinculadas directamente:
+        const SUPABASE_URL = "https://awmpaldghsbweifiaudc.supabase.co";
+        const SUPABASE_KEY = "sb_publishable_O-MKgu_IQ68BEftpLKPKfQ_yu_hiAnN";
+
+        const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+        const datos = {
+            invitado_principal: name1,
+            menu_principal: menu1,
+            acompanante: name2 || "Ninguno",
+            menu_acompanante: name2 ? menu2 : "N/A",
+            ninos: ninosCount
+        };
+
+        const { data, error } = await supabaseClient
+            .from('asistencias')
+            .insert([datos]);
+
+        if (error) {
+            alert("Error al enviar: " + error.message);
+            btn.disabled = false;
+            btn.innerHTML = '<span>Enviar Confirmación</span><span class="material-symbols-outlined">send</span>';
+        } else {
+            document.getElementById('form-container').classList.add('hidden');
+            document.getElementById('success-container').classList.remove('hidden');
+            window.scrollTo(0, 0);
+        }
+    }
+
+    function resetForm() {
+        document.getElementById('name1').value = "";
+        document.getElementById('name2').value = "";
+        ninosCount = 0;
+        document.getElementById('ninos-counter').innerText = "0";
+        
+        const details = document.getElementById('menu-details');
+        const arrow = document.getElementById('menu-arrow');
+        details.classList.remove('open');
+        details.classList.add('hidden');
+        arrow.style.transform = 'rotate(0deg)';
+        
+        document.getElementById('success-container').classList.add('hidden');
+        document.getElementById('form-container').classList.remove('hidden');
+        document.getElementById('btn-enviar').disabled = false;
+        document.getElementById('btn-enviar').innerHTML = '<span>Enviar Confirmación</span><span class="material-symbols-outlined">send</span>';
+    }
+</script>
+</body>
+</html>
