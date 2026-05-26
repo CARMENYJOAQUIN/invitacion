@@ -13,6 +13,7 @@
 </head>
 <body class="bg-gray-50 text-gray-800 min-h-screen p-4 md:p-8">
 
+    <!-- Pantalla de Login -->
     <div id="login-screen" class="max-w-md mx-auto mt-20 bg-white p-8 rounded-3xl shadow-xl border border-gray-100">
         <h2 class="text-2xl font-bold text-center mb-6 text-gray-900">Panel de Invitados 🔐</h2>
         <div class="space-y-4">
@@ -26,6 +27,7 @@
         </div>
     </div>
 
+    <!-- Pantalla del Panel de Datos (Oculta al principio) -->
     <div id="admin-panel" class="max-w-6xl mx-auto hidden space-y-6">
         <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-white p-6 rounded-3xl shadow-sm border border-gray-100">
             <div>
@@ -39,10 +41,15 @@
             </div>
         </div>
 
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <!-- Tarjetas de Resumen Modificadas -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             <div class="bg-white p-6 rounded-3xl border border-gray-100 shadow-sm">
-                <p class="text-xs font-bold text-gray-400 uppercase tracking-wider">Total Registros</p>
-                <p id="stat-registros" class="text-3xl font-bold text-gray-900 mt-1">0</p>
+                <p class="text-xs font-bold text-gray-400 uppercase tracking-wider">Total Adultos</p>
+                <p id="stat-adultos" class="text-3xl font-bold text-gray-900 mt-1">0</p>
+            </div>
+            <div class="bg-white p-6 rounded-3xl border border-gray-100 shadow-sm">
+                <p class="text-xs font-bold text-gray-400 uppercase tracking-wider">Total Niños</p>
+                <p id="stat-ninos" class="text-3xl font-bold text-green-600 mt-1">0</p>
             </div>
             <div class="bg-white p-6 rounded-3xl border border-gray-100 shadow-sm">
                 <p class="text-xs font-bold text-gray-400 uppercase tracking-wider">Menús de Carne</p>
@@ -54,6 +61,7 @@
             </div>
         </div>
 
+        <!-- Tabla de Datos -->
         <div class="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden">
             <div class="overflow-x-auto">
                 <table class="w-full text-left border-collapse">
@@ -67,14 +75,15 @@
                         </tr>
                     </thead>
                     <tbody id="tabla-cuerpo" class="divide-y divide-gray-100 text-sm text-gray-700">
-                        </tbody>
+                        <!-- Los datos se cargan aquí -->
+                    </tbody>
                 </table>
             </div>
         </div>
     </div>
 
 <script>
-    // 🔒 LA CONTRASEÑA QUE TÚ QUIERAS (Puedes cambiar "boda2026" por la que os guste)
+    // 🔒 CONTRASEÑA DE ACCESO
     const CONTRASENA_SECRETA = "boda2026";
 
     // Configuración automática con tus claves reales
@@ -109,6 +118,8 @@
 
         cuerpo.innerHTML = "";
         
+        let totalAdultos = 0;
+        let totalNinos = 0;
         let totalCarne = 0;
         let totalPescado = 0;
 
@@ -118,11 +129,24 @@
         }
 
         data.forEach(item => {
+            // Contabilizar Adultos (Invitado Principal siempre es 1)
+            totalAdultos += 1; 
+            
+            // Si tiene acompañante real y no está vacío ni es "Ninguno", sumamos otro adulto
+            if (item.acompanante && item.acompanante !== 'Ninguno' && item.acompanante.trim() !== '') {
+                totalAdultos += 1;
+            }
+
+            // Sumar los niños de este registro
+            totalNinos += parseInt(item.ninos || 0);
+
             // Contadores de menús
             if (item.menu_principal === 'Carne') totalCarne++;
             if (item.menu_principal === 'Pescado') totalPescado++;
-            if (item.acompanante !== 'Ninguno' && item.menu_acompanante === 'Carne') totalCarne++;
-            if (item.acompanante !== 'Ninguno' && item.menu_acompanante === 'Pescado') totalPescado++;
+            if (item.acompanante && item.acompanante !== 'Ninguno' && item.acompanante.trim() !== '') {
+                if (item.menu_acompanante === 'Carne') totalCarne++;
+                if (item.menu_acompanante === 'Pescado') totalPescado++;
+            }
 
             const fila = document.createElement('tr');
             fila.className = "hover:bg-gray-50/50 transition-colors";
@@ -133,15 +157,16 @@
                 </td>
                 <td class="py-4 px-6 text-gray-500">${item.acompanante}</td>
                 <td class="py-4 px-6">
-                    ${item.acompanante !== 'Ninguno' ? `<span class="px-2.5 py-1 rounded-lg text-xs font-bold ${item.menu_acompanante === 'Carne' ? 'bg-orange-50 text-orange-700' : 'bg-blue-50 text-blue-700'}">${item.menu_acompanante}</span>` : '<span class="text-gray-300">-</span>'}
+                    ${(item.acompanante && item.acompanante !== 'Ninguno' && item.acompanante.trim() !== '') ? `<span class="px-2.5 py-1 rounded-lg text-xs font-bold ${item.menu_acompanante === 'Carne' ? 'bg-orange-50 text-orange-700' : 'bg-blue-50 text-blue-700'}">${item.menu_acompanante}</span>` : '<span class="text-gray-300">-</span>'}
                 </td>
                 <td class="py-4 px-6 text-center font-bold text-gray-900">${item.ninos}</td>
             `;
             cuerpo.appendChild(fila);
         });
 
-        // Actualizar estadísticas superiores
-        document.getElementById('stat-registros').innerText = data.length;
+        // Actualizar estadísticas superiores en tiempo real
+        document.getElementById('stat-adultos').innerText = totalAdultos;
+        document.getElementById('stat-ninos').innerText = totalNinos;
         document.getElementById('stat-carne').innerText = totalCarne;
         document.getElementById('stat-pescado').innerText = totalPescado;
     }
