@@ -6,6 +6,10 @@
     <title>Panel de Administración - Boda Carmen y Joaquín</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <!-- Librerías para exportar a Excel y PDF -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700&family=Great+Vibes&display=swap" rel="stylesheet"/>
     <style>
         body { font-family: 'Plus Jakarta Sans', sans-serif; }
@@ -15,13 +19,13 @@
 <body class="bg-gray-50 text-gray-800 min-h-screen p-4 md:p-8">
 
     <div id="login-screen" class="max-w-md mx-auto mt-20 bg-white p-8 rounded-3xl shadow-xl border border-gray-100">
-        <h2 class="text-2xl font-bold text-center mb-6 text-gray-900">Panel de Invitados </h2>
+        <h2 class="text-2xl font-bold text-center mb-6 text-gray-900">Panel de Invitados</h2>
         <div class="space-y-4">
             <div>
                 <label class="text-xs font-bold text-gray-500 uppercase tracking-wider block mb-2">Contraseña de acceso</label>
                 <input id="password-input" type="password" class="w-full h-12 px-4 rounded-xl border-gray-200 focus:ring-2 focus:ring-green-400 focus:border-green-400 border" placeholder="Introduce la clave para ver la lista">
             </div>
-            <button onclick="verificarPassword()" class="w-full h-12 bg-green-500 hover:bg-green-600 text-white font-bold rounded-xl shadow-lg shadow-green-500/20 transition-all">
+            <button onclick="verificarPassword()" class="w-full h-12 bg-green-500 hover:bg-green-600 text-white font-bold rounded-xl shadow-lg shadow-green-500/20 transition-all cursor-pointer">
                 Entrar al Panel
             </button>
         </div>
@@ -34,8 +38,14 @@
                 <h1 class="font-script text-5xl text-gray-900 leading-tight">Carmen y Joaquin</h1>
                 <p class="text-gray-500 text-sm font-medium tracking-wide">Control de invitados en tiempo real</p>
             </div>
-            <div class="flex gap-3">
-                <button onclick="cargarInvitados()" class="h-11 px-5 bg-gray-100 hover:bg-gray-200 font-semibold text-sm text-gray-700 rounded-xl flex items-center gap-2 transition-all">
+            <div class="flex flex-wrap gap-3">
+                <button onclick="exportarExcel()" class="h-11 px-5 bg-emerald-600 hover:bg-emerald-700 font-semibold text-sm text-white rounded-xl flex items-center gap-2 shadow-sm transition-all cursor-pointer">
+                    📊 Excel
+                </button>
+                <button onclick="exportarPDF()" class="h-11 px-5 bg-rose-600 hover:bg-rose-700 font-semibold text-sm text-white rounded-xl flex items-center gap-2 shadow-sm transition-all cursor-pointer">
+                    📄 PDF
+                </button>
+                <button onclick="cargarInvitados()" class="h-11 px-5 bg-gray-100 hover:bg-gray-200 font-semibold text-sm text-gray-700 rounded-xl flex items-center gap-2 transition-all cursor-pointer">
                     🔄 Actualizar
                 </button>
             </div>
@@ -65,37 +75,36 @@
                 <table class="w-full text-left border-collapse">
                     <thead>
                         <tr class="bg-gray-50 border-b border-gray-100 text-xs font-bold text-gray-400 uppercase tracking-wider">
-                            <th class="py-4 px-6">Invitado Principal</th>
-                            <th class="py-4 px-6">Menú 1</th>
-                            <th class="py-4 px-6">Acompañante</th>
-                            <th class="py-4 px-6">Menú 2</th>
-                            <th class="py-4 px-6 text-center">Niños</th>
+                            <th class="py-4 px-6">Invitado / Acompañante</th>
+                            <th class="py-4 px-6">Tipo</th>
+                            <th class="py-4 px-6">Menú</th>
+                            <th class="py-4 px-6">Precio</th>
                         </tr>
                     </thead>
                     <tbody id="tabla-cuerpo" class="divide-y divide-gray-100 text-sm text-gray-700">
-                        </tbody>
+                        <!-- Se llena dinámicamente -->
+                    </tbody>
                 </table>
             </div>
         </div>
     </div>
 
 <script>
-    // 
     const CLAVE_OCULTA = "Ym9kYTIwMjY=";
+    const PRECIO_ADULTO = 118;
+    const PRECIO_NINO = 65;
 
     let supabaseClient = null;
+    let listaGlobalDatos = [];
 
     function verificarPassword() {
         const input = document.getElementById('password-input').value;
-        
-        // Convertimos lo que escribe el usuario al mismo formato oculto
         const inputCodificado = btoa(input);
 
         if (inputCodificado === CLAVE_OCULTA) {
             document.getElementById('login-screen').classList.add('hidden');
             document.getElementById('admin-panel').classList.remove('hidden');
             
-            // Las credenciales solo se crean en la memoria del navegador tras acertar la clave
             const u = "https://" + "awmpaldghsbweifiaudc" + ".supabase.co";
             const k = "sb_publishable_" + "O-MKgu_IQ68BEftpLKPKfQ_yu_hiAnN";
             supabaseClient = supabase.createClient(u, k);
@@ -110,7 +119,7 @@
         if (!supabaseClient) return;
 
         const cuerpo = document.getElementById('tabla-cuerpo');
-        cuerpo.innerHTML = `<tr><td colspan="5" class="text-center py-8 text-gray-400 animate-pulse">Cargando invitados...</td></tr>`;
+        cuerpo.innerHTML = `<tr><td colspan="4" class="text-center py-8 text-gray-400 animate-pulse">Cargando invitados...</td></tr>`;
 
         const { data, error } = await supabaseClient
             .from('asistencias')
@@ -122,53 +131,262 @@
             return;
         }
 
+        listaGlobalDatos = data || [];
+        renderizarTablaYEstadisticas();
+    }
+
+    function renderizarTablaYEstadisticas() {
+        const cuerpo = document.getElementById('tabla-cuerpo');
         cuerpo.innerHTML = "";
-        
+
         let totalAdultos = 0;
         let totalNinos = 0;
         let totalCarne = 0;
         let totalPescado = 0;
 
-        if(data.length === 0) {
-            cuerpo.innerHTML = `<tr><td colspan="5" class="text-center py-8 text-gray-400">Aún no hay confirmaciones.</td></tr>`;
+        let filasProcesadas = [];
+
+        if (listaGlobalDatos.length === 0) {
+            cuerpo.innerHTML = `<tr><td colspan="4" class="text-center py-8 text-gray-400">Aún no hay confirmaciones.</td></tr>`;
+            document.getElementById('stat-adultos').innerText = 0;
+            document.getElementById('stat-ninos').innerText = 0;
+            document.getElementById('stat-carne').innerText = 0;
+            document.getElementById('stat-pescado').innerText = 0;
             return;
         }
 
-        data.forEach(item => {
-            totalAdultos += 1; 
-            if (item.acompanante && item.acompanante !== 'Ninguno' && item.acompanante.trim() !== '') {
-                totalAdultos += 1;
-            }
-
-            totalNinos += parseInt(item.ninos || 0);
-
+        listaGlobalDatos.forEach(item => {
+            totalAdultos++;
             if (item.menu_principal === 'Carne') totalCarne++;
             if (item.menu_principal === 'Pescado') totalPescado++;
+
+            filasProcesadas.push({
+                nombre: item.invitado_principal,
+                tipo: 'Adulto',
+                menu: item.menu_principal || '-',
+                precio: PRECIO_ADULTO
+            });
+
             if (item.acompanante && item.acompanante !== 'Ninguno' && item.acompanante.trim() !== '') {
+                totalAdultos++;
                 if (item.menu_acompanante === 'Carne') totalCarne++;
                 if (item.menu_acompanante === 'Pescado') totalPescado++;
+
+                filasProcesadas.push({
+                    nombre: item.acompanante,
+                    tipo: 'Adulto',
+                    menu: item.menu_acompanante || '-',
+                    precio: PRECIO_ADULTO
+                });
             }
 
-            const fila = document.createElement('tr');
-            fila.className = "hover:bg-gray-50/50 transition-colors";
-            fila.innerHTML = `
-                <td class="py-4 px-6 font-semibold text-gray-900">${item.invitado_principal}</td>
+            const numNinos = parseInt(item.ninos || 0);
+            if (numNinos > 0) {
+                totalNinos += numNinos;
+                for (let i = 1; i <= numNinos; i++) {
+                    filasProcesadas.push({
+                        nombre: `Niño/a de ${item.invitado_principal} (${i})`,
+                        tipo: 'Niño',
+                        menu: 'Menú Infantil',
+                        precio: PRECIO_NINO
+                    });
+                }
+            }
+        });
+
+        filasProcesadas.forEach(row => {
+            const tr = document.createElement('tr');
+            tr.className = "hover:bg-gray-50/50 transition-colors";
+            tr.innerHTML = `
+                <td class="py-4 px-6 font-semibold text-gray-900">${row.nombre}</td>
                 <td class="py-4 px-6">
-                    <span class="px-2.5 py-1 rounded-lg text-xs font-bold ${item.menu_principal === 'Carne' ? 'bg-orange-50 text-orange-700' : 'bg-blue-50 text-blue-700'}">${item.menu_principal}</span>
+                    <span class="px-2.5 py-1 rounded-lg text-xs font-bold ${row.tipo === 'Adulto' ? 'bg-purple-50 text-purple-700' : 'bg-emerald-50 text-emerald-700'}">${row.tipo}</span>
                 </td>
-                <td class="py-4 px-6 text-gray-500">${item.acompanante}</td>
                 <td class="py-4 px-6">
-                    ${(item.acompanante && item.acompanante !== 'Ninguno' && item.acompanante.trim() !== '') ? `<span class="px-2.5 py-1 rounded-lg text-xs font-bold ${item.menu_acompanante === 'Carne' ? 'bg-orange-50 text-orange-700' : 'bg-blue-50 text-blue-700'}">${item.menu_acompanante}</span>` : '<span class="text-gray-300">-</span>'}
+                    <span class="px-2.5 py-1 rounded-lg text-xs font-bold ${row.menu === 'Carne' ? 'bg-orange-50 text-orange-700' : (row.menu === 'Pescado' ? 'bg-blue-50 text-blue-700' : 'bg-gray-100 text-gray-700')}">${row.menu}</span>
                 </td>
-                <td class="py-4 px-6 text-center font-bold text-gray-900">${item.ninos}</td>
+                <td class="py-4 px-6 font-bold text-gray-900">${row.precio} €</td>
             `;
-            cuerpo.appendChild(fila);
+            cuerpo.appendChild(tr);
         });
 
         document.getElementById('stat-adultos').innerText = totalAdultos;
         document.getElementById('stat-ninos').innerText = totalNinos;
         document.getElementById('stat-carne').innerText = totalCarne;
         document.getElementById('stat-pescado').innerText = totalPescado;
+    }
+
+    function calcularTotalesGenerales() {
+        let totalAdultos = 0;
+        let totalNinos = 0;
+        let totalCarne = 0;
+        let totalPescado = 0;
+
+        listaGlobalDatos.forEach(item => {
+            totalAdultos++;
+            if (item.menu_principal === 'Carne') totalCarne++;
+            if (item.menu_principal === 'Pescado') totalPescado++;
+
+            if (item.acompanante && item.acompanante !== 'Ninguno' && item.acompanante.trim() !== '') {
+                totalAdultos++;
+                if (item.menu_acompanante === 'Carne') totalCarne++;
+                if (item.menu_acompanante === 'Pescado') totalPescado++;
+            }
+
+            totalNinos += parseInt(item.ninos || 0);
+        });
+
+        const costeAdultos = totalAdultos * PRECIO_ADULTO;
+        const costeNinos = totalNinos * PRECIO_NINO;
+        const costeTotal = costeAdultos + costeNinos;
+
+        return { totalAdultos, totalNinos, totalCarne, totalPescado, costeAdultos, costeNinos, costeTotal };
+    }
+
+    function exportarExcel() {
+        if (listaGlobalDatos.length === 0) {
+            alert("No hay datos para exportar.");
+            return;
+        }
+
+        const totales = calcularTotalesGenerales();
+        let datosExcel = [];
+
+        datosExcel.push({ "Invitado / Acompañante": "BODA CARMEN Y JOAQUÍN - CONTROL DE ASISTENCIA Y COSTES", "Tipo": "", "Menú": "", "Precio": "" });
+        datosExcel.push({ "Invitado / Acompañante": `Fecha de exportación: ${new Date().toLocaleDateString()}`, "Tipo": "", "Menú": "", "Precio": "" });
+        datosExcel.push({}); 
+
+        datosExcel.push({ 
+            "Invitado / Acompañante": "NOMBRE DEL INVITADO / ACOMPAÑANTE", 
+            "Tipo": "TIPO ASISTENTE", 
+            "Menú": "MENÚ SELECCIONADO", 
+            "Precio": "PRECIO UNITARIO" 
+        });
+
+        listaGlobalDatos.forEach(item => {
+            datosExcel.push({
+                "Invitado / Acompañante": item.invitado_principal,
+                "Tipo": "Adulto",
+                "Menú": item.menu_principal || "-",
+                "Precio": PRECIO_ADULTO
+            });
+
+            if (item.acompanante && item.acompanante !== 'Ninguno' && item.acompanante.trim() !== '') {
+                datosExcel.push({
+                    "Invitado / Acompañante": item.acompanante,
+                    "Tipo": "Adulto",
+                    "Menú": item.menu_acompanante || "-",
+                    "Precio": PRECIO_ADULTO
+                });
+            }
+
+            const n = parseInt(item.ninos || 0);
+            for (let i = 1; i <= n; i++) {
+                datosExcel.push({
+                    "Invitado / Acompañante": `Niño/a de ${item.invitado_principal}`,
+                    "Tipo": "Niño",
+                    "Menú": "Menú Infantil",
+                    "Precio": PRECIO_NINO
+                });
+            }
+        });
+
+        datosExcel.push({});
+        datosExcel.push({ "Invitado / Acompañante": "=== RESUMEN DE TOTALES Y PRESUPUESTO ===", "Tipo": "", "Menú": "", "Precio": "" });
+        datosExcel.push({ "Invitado / Acompañante": `Total Adultos (${totales.totalAdultos} personas)`, "Tipo": "", "Menú": "", "Precio": totales.costeAdultos });
+        datosExcel.push({ "Invitado / Acompañante": `Total Niños (${totales.totalNinos} personas)`, "Tipo": "", "Menú": "", "Precio": totales.costeNinos });
+        datosExcel.push({ "Invitado / Acompañante": `Desglose Menús: ${totales.totalCarne} Carne | ${totales.totalPescado} Pescado`, "Tipo": "", "Menú": "", "Precio": "" });
+        datosExcel.push({ "Invitado / Acompañante": "COSTE TOTAL GENERAL (Adultos + Niños)", "Tipo": "", "Menú": "", "Precio": totales.costeTotal });
+
+        const worksheet = XLSX.utils.json_to_sheet(datosExcel, { skipHeader: true });
+
+        worksheet['!cols'] = [
+            { wch: 42 },
+            { wch: 22 },
+            { wch: 25 },
+            { wch: 18 }
+        ];
+
+        const workbook = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(workbook, worksheet, "Resumen Boda");
+        XLSX.writeFile(workbook, "Listado_Invitados_Carmen_Joaquin.xlsx");
+    }
+
+    function exportarPDF() {
+        if (listaGlobalDatos.length === 0) {
+            alert("No hay datos para exportar.");
+            return;
+        }
+
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF('p', 'mm', 'a4');
+        const totales = calcularTotalesGenerales();
+
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(14);
+        doc.setTextColor(15, 118, 110);
+        doc.text("Boda Carmen y Joaquín", 12, 12);
+
+        doc.setFontSize(8);
+        doc.setFont("helvetica", "normal");
+        doc.setTextColor(100, 116, 139);
+        doc.text(`Listado oficial de asistentes y resumen económico — ${new Date().toLocaleDateString()}`, 12, 16);
+
+        let filasPdf = [];
+        listaGlobalDatos.forEach(item => {
+            filasPdf.push([item.invitado_principal, "Adulto", item.menu_principal || "-", `${PRECIO_ADULTO} €`]);
+
+            if (item.acompanante && item.acompanante !== 'Ninguno' && item.acompanante.trim() !== '') {
+                filasPdf.push([item.acompanante, "Adulto", item.menu_acompanante || "-", `${PRECIO_ADULTO} €`]);
+            }
+
+            const n = parseInt(item.ninos || 0);
+            for (let i = 1; i <= n; i++) {
+                filasPdf.push([`Niño/a de ${item.invitado_principal}`, "Niño", "Menú Infantil", `${PRECIO_NINO} €`]);
+            }
+        });
+
+        doc.autoTable({
+            startY: 19,
+            head: [['Invitado / Acompañante', 'Tipo', 'Menú', 'Precio']],
+            body: filasPdf,
+            theme: 'striped',
+            headStyles: { fillColor: [15, 118, 110], fontSize: 8, fontStyle: 'bold', cellPadding: 2 },
+            bodyStyles: { fontSize: 7.5, cellPadding: 1.5 },
+            alternateRowStyles: { fillColor: [248, 250, 252] },
+            didParseCell: function(data) {
+                // Sombra suave en color verde para las filas de los niños
+                if (data.section === 'body' && data.row.raw[1] === 'Niño') {
+                    data.cell.styles.fillColor = [220, 252, 231]; // Verde claro muy elegante (Tailwind emerald-100)
+                    data.cell.styles.textColor = [6, 95, 70];    // Texto verde oscuro
+                }
+            },
+            margin: { left: 12, right: 12, bottom: 25 }
+        });
+
+        let finalY = doc.lastAutoTable.finalY + 3;
+        
+        doc.setFillColor(241, 245, 249);
+        doc.setLineWidth(0.2);
+        doc.setDrawColor(203, 213, 225);
+        doc.roundedRect(12, finalY, 186, 26, 2, 2, 'FD');
+
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(9);
+        doc.setTextColor(30, 41, 59);
+        doc.text("Resumen General y Costes", 16, finalY + 5);
+
+        doc.setFont("helvetica", "normal");
+        doc.setFontSize(8);
+        doc.text(`• Total Adultos: ${totales.totalAdultos} (${totales.costeAdultos} € a ${PRECIO_ADULTO}€/u)   |   Total Niños: ${totales.totalNinos} (${totales.costeNinos} € a ${PRECIO_NINO}€/u)`, 16, finalY + 11);
+        doc.text(`• Menús: ${totales.totalCarne} Carne | ${totales.totalPescado} Pescado`, 16, finalY + 16);
+
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(8.5);
+        doc.setTextColor(190, 18, 60);
+        doc.text(`COSTE TOTAL GENERAL (Adultos + Niños): ${totales.costeTotal} €`, 16, finalY + 21);
+
+        doc.save("Listado_Invitados_Carmen_Joaquin.pdf");
     }
 </script>
 </body>
