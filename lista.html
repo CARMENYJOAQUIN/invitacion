@@ -14,24 +14,56 @@
     <style>
         body { font-family: 'Plus Jakarta Sans', sans-serif; }
         .font-script { font-family: 'Great Vibes', cursive; }
+        
+        /* Animaciones para el fondo ahumado / mágico */
+        @keyframes blob {
+            0% { transform: translate(0px, 0px) scale(1); }
+            33% { transform: translate(30px, -50px) scale(1.1); }
+            66% { transform: translate(-20px, 20px) scale(0.9); }
+            100% { transform: translate(0px, 0px) scale(1); }
+        }
+        .animate-blob {
+            animation: blob 7s infinite;
+        }
+        .animation-delay-2000 {
+            animation-delay: 2s;
+        }
+        .animation-delay-4000 {
+            animation-delay: 4s;
+        }
     </style>
 </head>
-<body class="bg-gray-50 text-gray-800 min-h-screen p-4 md:p-8">
+<body class="bg-gray-50 text-gray-800 min-h-screen">
 
-    <div id="login-screen" class="max-w-md mx-auto mt-20 bg-white p-8 rounded-3xl shadow-xl border border-gray-100">
-        <h2 class="text-2xl font-bold text-center mb-6 text-gray-900">Panel de Invitados</h2>
-        <div class="space-y-4">
-            <div>
-                <label class="text-xs font-bold text-gray-500 uppercase tracking-wider block mb-2">Contraseña de acceso</label>
-                <input id="password-input" type="password" class="w-full h-12 px-4 rounded-xl border-gray-200 focus:ring-2 focus:ring-green-400 focus:border-green-400 border" placeholder="Introduce la clave para ver la lista">
+    <!-- CONTENEDOR DE LOGIN (Estilo SmokeyBackground) -->
+    <div id="login-container" class="fixed inset-0 z-50 flex items-center justify-center bg-gray-900 overflow-hidden">
+        <!-- Fondo animado (Smokey Effect) -->
+        <div class="absolute inset-0 z-0">
+            <div class="absolute top-1/4 left-1/4 w-96 h-96 bg-purple-900/40 rounded-full mix-blend-screen filter blur-[100px] opacity-70 animate-blob"></div>
+            <div class="absolute top-1/3 right-1/4 w-96 h-96 bg-emerald-900/40 rounded-full mix-blend-screen filter blur-[100px] opacity-70 animate-blob animation-delay-2000"></div>
+            <div class="absolute bottom-1/4 left-1/2 w-96 h-96 bg-blue-900/40 rounded-full mix-blend-screen filter blur-[100px] opacity-70 animate-blob animation-delay-4000"></div>
+        </div>
+
+        <!-- Formulario Glassmorphism -->
+        <div class="relative z-10 w-full max-w-md mx-4 p-8 bg-gray-800/60 backdrop-blur-xl rounded-3xl shadow-2xl border border-gray-700/50">
+            <div class="text-center mb-8">
+                <h1 class="font-script text-5xl text-white mb-2 tracking-wide">Carmen y Joaquin</h1>
+                <p class="text-gray-400 text-sm tracking-widest uppercase">Acceso Privado</p>
             </div>
-            <button onclick="verificarPassword()" class="w-full h-12 bg-green-500 hover:bg-green-600 text-white font-bold rounded-xl shadow-lg shadow-green-500/20 transition-all cursor-pointer">
-                Entrar al Panel
-            </button>
+            <div class="space-y-6">
+                <div>
+                    <label class="text-xs font-bold text-gray-400 uppercase tracking-wider block mb-2">Contraseña de acceso</label>
+                    <input id="password-input" type="password" class="w-full h-12 px-4 bg-gray-900/50 text-white rounded-xl border border-gray-600 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 placeholder-gray-500 transition-all outline-none" placeholder="••••••••">
+                </div>
+                <button onclick="verificarPassword()" class="w-full h-12 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-xl shadow-lg shadow-emerald-500/30 transition-all cursor-pointer">
+                    Entrar al Panel
+                </button>
+            </div>
         </div>
     </div>
 
-    <div id="admin-panel" class="max-w-6xl mx-auto hidden space-y-6">
+    <!-- PANEL DE ADMINISTRACIÓN (Mantiene su diseño claro original) -->
+    <div id="admin-panel" class="max-w-6xl mx-auto hidden space-y-6 p-4 md:p-8 pt-8">
         
         <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-white p-6 rounded-3xl shadow-sm border border-gray-100">
             <div>
@@ -93,6 +125,7 @@
     const CLAVE_OCULTA = "Ym9kYTIwMjY=";
     const PRECIO_ADULTO = 118;
     const PRECIO_NINO = 38.5;
+    const ADELANTO_PAGADO = 1000;
 
     let supabaseClient = null;
     let listaGlobalDatos = [];
@@ -102,7 +135,9 @@
         const inputCodificado = btoa(input);
 
         if (inputCodificado === CLAVE_OCULTA) {
-            document.getElementById('login-screen').classList.add('hidden');
+            // Ocultamos el contenedor principal de login entero
+            document.getElementById('login-container').classList.add('hidden');
+            // Mostramos el panel de admin
             document.getElementById('admin-panel').classList.remove('hidden');
             
             const u = "https://" + "awmpaldghsbweifiaudc" + ".supabase.co";
@@ -238,9 +273,20 @@
 
         const costeAdultos = totalAdultos * PRECIO_ADULTO;
         const costeNinos = totalNinos * PRECIO_NINO;
-        const costeTotal = costeAdultos + costeNinos;
+        const subtotalSinAdelanto = costeAdultos + costeNinos;
+        const costePendiente = subtotalSinAdelanto - ADELANTO_PAGADO;
 
-        return { totalAdultos, totalNinos, totalCarne, totalPescado, costeAdultos, costeNinos, costeTotal };
+        return { 
+            totalAdultos, 
+            totalNinos, 
+            totalCarne, 
+            totalPescado, 
+            costeAdultos, 
+            costeNinos, 
+            subtotalSinAdelanto, 
+            adelanto: ADELANTO_PAGADO,
+            costePendiente 
+        };
     }
 
     function exportarExcel() {
@@ -296,7 +342,9 @@
         datosExcel.push({ "Invitado / Acompañante": `Total Adultos (${totales.totalAdultos} personas)`, "Tipo": "", "Menú": "", "Precio": totales.costeAdultos });
         datosExcel.push({ "Invitado / Acompañante": `Total Niños (${totales.totalNinos} personas)`, "Tipo": "", "Menú": "", "Precio": totales.costeNinos });
         datosExcel.push({ "Invitado / Acompañante": `Desglose Menús: ${totales.totalCarne} Carne | ${totales.totalPescado} Pescado`, "Tipo": "", "Menú": "", "Precio": "" });
-        datosExcel.push({ "Invitado / Acompañante": "COSTE TOTAL GENERAL (Adultos + Niños)", "Tipo": "", "Menú": "", "Precio": totales.costeTotal });
+        datosExcel.push({ "Invitado / Acompañante": "SUBTOTAL BODA (Adultos + Niños)", "Tipo": "", "Menú": "", "Precio": totales.subtotalSinAdelanto });
+        datosExcel.push({ "Invitado / Acompañante": "ADELANTO / RESERVA YA PAGADA", "Tipo": "", "Menú": "", "Precio": -totales.adelanto });
+        datosExcel.push({ "Invitado / Acompañante": "COSTE FINAL PENDIENTE DE PAGO", "Tipo": "", "Menú": "", "Precio": totales.costePendiente });
 
         const worksheet = XLSX.utils.json_to_sheet(datosExcel, { skipHeader: true });
 
@@ -319,18 +367,7 @@
         }
 
         const { jsPDF } = window.jspdf;
-        const doc = new jsPDF('p', 'mm', 'a4');
         const totales = calcularTotalesGenerales();
-
-        doc.setFont("helvetica", "bold");
-        doc.setFontSize(14);
-        doc.setTextColor(15, 118, 110);
-        doc.text("Boda Carmen y Joaquín", 12, 12);
-
-        doc.setFontSize(8);
-        doc.setFont("helvetica", "normal");
-        doc.setTextColor(100, 116, 139);
-        doc.text(`Listado oficial de asistentes y resumen económico — ${new Date().toLocaleDateString()}`, 12, 16);
 
         let filasPdf = [];
         listaGlobalDatos.forEach(item => {
@@ -346,6 +383,28 @@
             }
         });
 
+        const alturaTituloyEspacios = 80;
+        const alturaPorFila = 8;
+        const alturaNecesaria = alturaTituloyEspacios + (filasPdf.length * alturaPorFila);
+        
+        const alturaPaginaUnica = Math.max(297, alturaNecesaria);
+
+        const doc = new jsPDF({
+            orientation: 'p',
+            unit: 'mm',
+            format: [210, alturaPaginaUnica]
+        });
+
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(14);
+        doc.setTextColor(15, 118, 110);
+        doc.text("Boda Carmen y Joaquín", 12, 12);
+
+        doc.setFontSize(8);
+        doc.setFont("helvetica", "normal");
+        doc.setTextColor(100, 116, 139);
+        doc.text(`Listado oficial de asistentes y resumen económico — ${new Date().toLocaleDateString()}`, 12, 16);
+
         doc.autoTable({
             startY: 19,
             head: [['Invitado / Acompañante', 'Tipo', 'Menú', 'Precio']],
@@ -355,21 +414,20 @@
             bodyStyles: { fontSize: 7.5, cellPadding: 1.5 },
             alternateRowStyles: { fillColor: [248, 250, 252] },
             didParseCell: function(data) {
-                // Sombra suave en color verde para las filas de los niños
                 if (data.section === 'body' && data.row.raw[1] === 'Niño') {
-                    data.cell.styles.fillColor = [220, 252, 231]; // Verde claro muy elegante (Tailwind emerald-100)
-                    data.cell.styles.textColor = [6, 95, 70];    // Texto verde oscuro
+                    data.cell.styles.fillColor = [220, 252, 231]; 
+                    data.cell.styles.textColor = [6, 95, 70];    
                 }
             },
-            margin: { left: 12, right: 12, bottom: 25 }
+            margin: { left: 12, right: 12, bottom: 10 }
         });
 
-        let finalY = doc.lastAutoTable.finalY + 3;
+        let finalY = doc.lastAutoTable.finalY + 5;
         
         doc.setFillColor(241, 245, 249);
         doc.setLineWidth(0.2);
         doc.setDrawColor(203, 213, 225);
-        doc.roundedRect(12, finalY, 186, 26, 2, 2, 'FD');
+        doc.roundedRect(12, finalY, 186, 32, 2, 2, 'FD');
 
         doc.setFont("helvetica", "bold");
         doc.setFontSize(9);
@@ -378,17 +436,18 @@
 
         doc.setFont("helvetica", "normal");
         doc.setFontSize(8);
-        doc.text(`• Total Adultos: ${totales.totalAdultos} (${totales.costeAdultos} € a ${PRECIO_ADULTO}€/u)   |   Total Niños: ${totales.totalNinos} (${totales.costeNinos} € a ${PRECIO_NINO}€/u)`, 16, finalY + 11);
-        doc.text(`• Menús: ${totales.totalCarne} Carne | ${totales.totalPescado} Pescado`, 16, finalY + 16);
+        doc.text(`• Total Adultos: ${totales.totalAdultos} (${totales.costeAdultos} € a ${PRECIO_ADULTO}€/u)   |   Total Niños: ${totales.totalNinos} (${totales.costeNinos} € a ${PRECIO_NINO}€/u)`, 16, finalY + 10);
+        doc.text(`• Menús: ${totales.totalCarne} Carne | ${totales.totalPescado} Pescado`, 16, finalY + 15);
+        doc.text(`• Subtotal (Menús Adultos + Niños): ${totales.subtotalSinAdelanto} €`, 16, finalY + 20);
+        doc.text(`• Adelanto / Reserva ya pagada: - ${totales.adelanto} €`, 16, finalY + 25);
 
         doc.setFont("helvetica", "bold");
         doc.setFontSize(8.5);
         doc.setTextColor(190, 18, 60);
-        doc.text(`COSTE TOTAL GENERAL (Adultos + Niños): ${totales.costeTotal} €`, 16, finalY + 21);
+        doc.text(`COSTE FINAL PENDIENTE DE PAGO: ${totales.costePendiente} €`, 16, finalY + 30);
 
         doc.save("Listado_Invitados_Carmen_Joaquin.pdf");
     }
 </script>
 </body>
 </html>
-
