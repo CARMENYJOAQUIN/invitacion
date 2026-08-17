@@ -19,220 +19,258 @@
         }
     </script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <!-- Librerías para exportar a Excel y PDF -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
-    <!-- Lucide Icons -->
     <script src="https://unpkg.com/lucide@latest"></script>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Great+Vibes&display=swap" rel="stylesheet"/>
     <style>
         .font-script { font-family: 'Great Vibes', cursive; }
+
+        /* Estilos específicos para las tarjetas de mesas (Monocromáticas / Dark) */
+        .card-mesa {
+            background: #111111;
+            border: 1px solid #333333;
+            border-radius: 1rem;
+            padding: 1.5rem;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.5);
+            transition: all 0.3s ease;
+            width: 100%;
+        }
+        .card-mesa:hover {
+            border-color: #666666;
+        }
+        .guests-container {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.3s ease-in-out, opacity 0.3s ease-in-out;
+            opacity: 0;
+        }
+        .guests-container.expanded {
+            max-height: 500px;
+            opacity: 1;
+        }
+
+        /* Estilos para el panel deslizante en móvil */
+        #mobile-sidebar {
+            transition: transform 0.3s ease-in-out;
+            transform: translateX(-100%);
+        }
+        #mobile-sidebar.open {
+            transform: translateX(0);
+        }
+        @media (min-width: 768px) {
+            #mobile-sidebar {
+                transform: translateX(0) !important;
+            }
+        }
     </style>
 </head>
-<body class="bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 h-screen overflow-hidden transition-colors duration-200">
+<body class="bg-black text-white h-screen overflow-hidden transition-colors duration-200">
 
-    <!-- PANTALLA DE LOGIN -->
-    <div id="login-screen" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 dark:bg-slate-950/80 backdrop-blur-sm">
-        <div class="max-w-md w-full bg-white dark:bg-slate-900 p-8 rounded-2xl shadow-xl border border-slate-200 dark:border-slate-800">
+    <div id="login-screen" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/90 backdrop-blur-sm">
+        <div class="max-w-md w-full bg-[#111111] p-8 rounded-2xl shadow-2xl border border-neutral-800">
             <div class="text-center mb-6">
-                <h1 class="font-script text-4xl text-slate-900 dark:text-white mb-1">Carmen y Joaquín</h1>
-                <p class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Panel de Control Privado</p>
+                <h1 class="font-script text-4xl text-white mb-1">Carmen y Joaquín</h1>
+                <p class="text-xs font-semibold text-neutral-400 uppercase tracking-wider">Panel de Control Privado</p>
             </div>
             <div class="space-y-4">
                 <div>
-                    <label class="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider block mb-2">Contraseña de acceso</label>
-                    <input id="password-input" type="password" onkeydown="if(event.key === 'Enter') verificarPassword()" class="w-full h-11 px-4 bg-white dark:bg-slate-950 text-slate-900 dark:text-white rounded-xl border border-slate-200 dark:border-slate-800 focus:ring-2 focus:ring-slate-900 dark:focus:ring-slate-100 focus:border-transparent outline-none transition-all text-sm" placeholder="Introduce la clave">
+                    <label class="text-xs font-bold text-neutral-400 uppercase tracking-wider block mb-2">Contraseña de acceso</label>
+                    <input id="password-input" type="password" onkeydown="if(event.key === 'Enter') verificarPassword()" class="w-full h-11 px-4 bg-black text-white rounded-xl border border-neutral-800 focus:ring-2 focus:ring-white focus:border-transparent outline-none transition-all text-sm" placeholder="Introduce la clave">
                 </div>
-                <button onclick="verificarPassword()" class="w-full h-11 bg-slate-900 hover:bg-slate-800 dark:bg-slate-100 dark:hover:bg-white dark:text-slate-900 text-white font-semibold text-sm rounded-xl shadow-sm transition-all cursor-pointer">
+                <button onclick="verificarPassword()" class="w-full h-11 bg-white hover:bg-neutral-200 text-black font-semibold text-sm rounded-xl shadow-sm transition-all cursor-pointer">
                     Acceder al Dashboard
                 </button>
             </div>
         </div>
     </div>
 
-    <!-- APP SHELL CONTAINER -->
-    <div id="admin-panel" class="flex h-screen w-full overflow-hidden hidden">
+    <div id="admin-panel" class="flex h-screen w-full overflow-hidden hidden relative">
 
-        <!-- SIDEBAR -->
-        <aside class="w-72 bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 hidden md:flex flex-col justify-between shrink-0 transition-colors duration-200">
+        <div id="sidebar-overlay" onclick="toggleMobileSidebar()" class="fixed inset-0 bg-black/80 z-40 hidden md:hidden backdrop-blur-xs transition-opacity"></div>
+
+        <aside id="mobile-sidebar" class="fixed md:static inset-y-0 left-0 z-50 w-72 bg-[#111111] border-r border-neutral-800 flex flex-col justify-between shrink-0">
             <div class="flex flex-col h-full">
-                <!-- Workspace Switcher -->
-                <div class="p-3 border-b border-slate-200 dark:border-slate-800">
-                    <div class="flex items-center justify-between px-3 py-2 rounded-lg bg-slate-100 dark:bg-slate-800/60 select-none">
-                        <div class="flex items-center gap-3 overflow-hidden">
-                            <div class="w-8 h-8 rounded-[6px] bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 flex items-center justify-center font-bold text-xs shadow-sm shrink-0">
-                                C&J
-                            </div>
-                            <div class="flex flex-col overflow-hidden">
-                                <span class="text-[13px] font-semibold text-slate-900 dark:text-slate-100 truncate">Carmen & Joaquín</span>
-                                <span class="text-[11px] text-slate-500 dark:text-slate-400 leading-none">Boda 2026</span>
-                            </div>
+                <div class="p-3 border-b border-neutral-800 flex items-center justify-between">
+                    <div class="flex items-center gap-3 px-3 py-2 rounded-lg bg-neutral-900 select-none w-full">
+                        <div class="w-8 h-8 rounded-[6px] bg-white text-black flex items-center justify-center font-bold text-xs shadow-sm shrink-0">
+                            C&J
+                        </div>
+                        <div class="flex flex-col overflow-hidden">
+                            <span class="text-[13px] font-semibold text-white truncate">Carmen & Joaquín</span>
+                            <span class="text-[11px] text-neutral-400 leading-none">Boda 2026</span>
                         </div>
                     </div>
+                    <button onclick="toggleMobileSidebar()" class="md:hidden p-2 text-neutral-400 hover:text-white">
+                        <i data-lucide="x" class="w-5 h-5"></i>
+                    </button>
                 </div>
 
-                <!-- Navigation Links / Grupos -->
                 <nav class="p-3 space-y-6 flex-1 overflow-y-auto">
                     <div>
-                        <div class="px-3 mb-2 text-[11px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">Grupos de Invitados</div>
+                        <div class="px-3 mb-2 text-[11px] font-bold uppercase tracking-wider text-neutral-500">Grupos de Invitados</div>
                         <div id="sidebar-menu" class="space-y-0.5">
-                            <a href="#" onclick="cambiarFiltro('todos', this)" class="menu-item flex items-center gap-3 px-3 py-2 text-[13px] font-semibold text-slate-900 dark:text-slate-100 bg-slate-100 dark:bg-slate-800/80 rounded-lg transition-colors">
-                                <i data-lucide="layout-dashboard" class="w-4 h-4 text-slate-700 dark:text-slate-300"></i>
+                            <a href="#" onclick="cambiarFiltro('todos', this); toggleMobileSidebarIfMobile();" class="menu-item flex items-center gap-3 px-3 py-2 text-[13px] font-semibold text-white bg-neutral-900 rounded-lg transition-colors">
+                                <i data-lucide="layout-dashboard" class="w-4 h-4 text-white"></i>
                                 Todos los Invitados
                             </a>
-                            <a href="#" onclick="cambiarFiltro('Familia Joaquin Gimenez', this)" class="menu-item flex items-center gap-3 px-3 py-2 text-[13px] font-medium text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 hover:bg-slate-50 dark:hover:bg-slate-800/50 rounded-lg transition-colors">
-                                <i data-lucide="users" class="w-4 h-4 text-slate-500"></i>
+                            <a href="#" onclick="cambiarFiltro('Familia Joaquin Gimenez', this); toggleMobileSidebarIfMobile();" class="menu-item flex items-center gap-3 px-3 py-2 text-[13px] font-medium text-neutral-400 hover:text-white hover:bg-neutral-900/50 rounded-lg transition-colors">
+                                <i data-lucide="users" class="w-4 h-4 text-neutral-500"></i>
                                 Familia Joaquin Gimenez
                             </a>
-                            <a href="#" onclick="cambiarFiltro('Familia Carmen Soler', this)" class="menu-item flex items-center gap-3 px-3 py-2 text-[13px] font-medium text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 hover:bg-slate-50 dark:hover:bg-slate-800/50 rounded-lg transition-colors">
-                                <i data-lucide="users" class="w-4 h-4 text-slate-500"></i>
+                            <a href="#" onclick="cambiarFiltro('Familia Carmen Soler', this); toggleMobileSidebarIfMobile();" class="menu-item flex items-center gap-3 px-3 py-2 text-[13px] font-medium text-neutral-400 hover:text-white hover:bg-neutral-900/50 rounded-lg transition-colors">
+                                <i data-lucide="users" class="w-4 h-4 text-neutral-500"></i>
                                 Familia Carmen Soler
                             </a>
-                            <a href="#" onclick="cambiarFiltro('Amigos', this)" class="menu-item flex items-center gap-3 px-3 py-2 text-[13px] font-medium text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 hover:bg-slate-50 dark:hover:bg-slate-800/50 rounded-lg transition-colors">
-                                <i data-lucide="users" class="w-4 h-4 text-slate-500"></i>
+                            <a href="#" onclick="cambiarFiltro('Amigos', this); toggleMobileSidebarIfMobile();" class="menu-item flex items-center gap-3 px-3 py-2 text-[13px] font-medium text-neutral-400 hover:text-white hover:bg-neutral-900/50 rounded-lg transition-colors">
+                                <i data-lucide="users" class="w-4 h-4 text-neutral-500"></i>
                                 Amigos
                             </a>
                         </div>
                     </div>
 
                     <div>
-                        <div class="px-3 mb-2 text-[11px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">Exportar & Informes</div>
+                        <div class="px-3 mb-2 text-[11px] font-bold uppercase tracking-wider text-neutral-500">Distribución</div>
                         <div class="space-y-0.5">
-                            <a href="#" onclick="exportarExcel()" class="flex items-center gap-3 px-3 py-2 text-[13px] font-medium text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 hover:bg-slate-50 dark:hover:bg-slate-800/50 rounded-lg transition-colors">
-                                <i data-lucide="file-spreadsheet" class="w-4 h-4 text-emerald-600 dark:text-emerald-400"></i>
+                            <a href="#" onclick="mostrarSeccionMesas(this); toggleMobileSidebarIfMobile();" class="menu-item flex items-center gap-3 px-3 py-2 text-[13px] font-medium text-neutral-400 hover:text-white hover:bg-neutral-900/50 rounded-lg transition-colors">
+                                <i data-lucide="grid" class="w-4 h-4 text-neutral-500"></i>
+                                Organización de Mesas
+                            </a>
+                        </div>
+                    </div>
+
+                    <div>
+                        <div class="px-3 mb-2 text-[11px] font-bold uppercase tracking-wider text-neutral-500">Exportar & Informes</div>
+                        <div class="space-y-0.5">
+                            <a href="#" onclick="exportarExcel()" class="flex items-center gap-3 px-3 py-2 text-[13px] font-medium text-neutral-400 hover:text-white hover:bg-neutral-900/50 rounded-lg transition-colors">
+                                <i data-lucide="file-spreadsheet" class="w-4 h-4 text-neutral-300"></i>
                                 Exportar Excel
                             </a>
-                            <a href="#" onclick="exportarPDF()" class="flex items-center gap-3 px-3 py-2 text-[13px] font-medium text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 hover:bg-slate-50 dark:hover:bg-slate-800/50 rounded-lg transition-colors">
-                                <i data-lucide="file-text" class="w-4 h-4 text-rose-600 dark:text-rose-400"></i>
+                            <a href="#" onclick="exportarPDF()" class="flex items-center gap-3 px-3 py-2 text-[13px] font-medium text-neutral-400 hover:text-white hover:bg-neutral-900/50 rounded-lg transition-colors">
+                                <i data-lucide="file-text" class="w-4 h-4 text-neutral-300"></i>
                                 Exportar PDF
                             </a>
                         </div>
                     </div>
                 </nav>
 
-                <!-- Bottom User / Controls -->
-                <div class="p-3 border-t border-slate-200 dark:border-slate-800 space-y-1">
-                    <button onclick="toggleDarkMode()" class="w-full flex items-center justify-between px-3 py-2 text-[13px] font-medium text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 hover:bg-slate-50 dark:hover:bg-slate-800/50 rounded-lg transition-colors cursor-pointer">
-                        <div class="flex items-center gap-3">
-                            <i data-lucide="moon" class="w-4 h-4 text-slate-500 dark:hidden"></i>
-                            <i data-lucide="sun" class="w-4 h-4 text-amber-400 hidden dark:block"></i>
-                            <span class="dark:hidden">Modo Oscuro</span>
-                            <span class="hidden dark:block">Modo Claro</span>
-                        </div>
-                    </button>
+                <div class="p-3 border-t border-neutral-800 space-y-1">
                     <div class="flex items-center gap-3 px-3 py-2">
-                        <div class="w-7 h-7 rounded-full bg-slate-200 dark:bg-slate-800 flex items-center justify-center text-slate-700 dark:text-slate-300 font-bold text-xs">CJ</div>
+                        <div class="w-7 h-7 rounded-full bg-neutral-800 flex items-center justify-center text-white font-bold text-xs">CJ</div>
                         <div class="overflow-hidden">
-                            <p class="text-xs font-bold text-slate-900 dark:text-slate-100 truncate">Carmen & Joaquín</p>
-                            <p class="text-[10px] text-slate-500 dark:text-slate-400 truncate">Administradores</p>
+                            <p class="text-xs font-bold text-white truncate">Carmen & Joaquín</p>
+                            <p class="text-[10px] text-neutral-400 truncate">Administradores</p>
                         </div>
                     </div>
                 </div>
             </div>
         </aside>
 
-        <!-- MAIN AREA -->
         <div class="flex-1 flex flex-col min-w-0 overflow-hidden">
 
-            <!-- HEADER -->
-            <header class="h-16 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 px-6 flex items-center justify-between shrink-0 transition-colors duration-200">
-                <div class="flex items-center gap-4">
-                    <h1 id="header-title" class="text-sm font-bold text-slate-900 dark:text-slate-100 tracking-tight">Resumen de Asistencia y Menús (Todos los Invitados)</h1>
+            <header class="h-16 bg-[#111111] border-b border-neutral-800 px-4 md:px-6 flex items-center justify-between shrink-0 transition-colors duration-200">
+                <div class="flex items-center gap-3">
+                    <button onclick="toggleMobileSidebar()" class="md:hidden p-2 text-neutral-300 hover:text-white rounded-lg bg-neutral-900 border border-neutral-800">
+                        <i data-lucide="menu" class="w-5 h-5"></i>
+                    </button>
+                    <h1 id="header-title" class="text-xs md:text-sm font-bold text-white tracking-tight truncate">Resumen de Asistencia y Menús (Todos los Invitados)</h1>
                 </div>
-                <div class="flex items-center gap-2">
-                    <button onclick="exportarExcel()" class="h-9 px-3.5 bg-emerald-600 hover:bg-emerald-700 font-semibold text-xs text-white rounded-lg flex items-center gap-1.5 transition-all cursor-pointer shadow-sm">
-                        <i data-lucide="file-spreadsheet" class="w-3.5 h-3.5"></i> Excel
+                <div id="header-actions" class="flex items-center gap-2">
+                    <button onclick="exportarExcel()" class="h-9 px-3 bg-neutral-800 hover:bg-neutral-700 font-semibold text-xs text-white rounded-lg flex items-center gap-1.5 transition-all cursor-pointer border border-neutral-700">
+                        <i data-lucide="file-spreadsheet" class="w-3.5 h-3.5"></i> <span class="hidden sm:inline">Excel</span>
                     </button>
-                    <button onclick="exportarPDF()" class="h-9 px-3.5 bg-rose-600 hover:bg-rose-700 font-semibold text-xs text-white rounded-lg flex items-center gap-1.5 transition-all cursor-pointer shadow-sm">
-                        <i data-lucide="file-text" class="w-3.5 h-3.5"></i> PDF
+                    <button onclick="exportarPDF()" class="h-9 px-3 bg-neutral-800 hover:bg-neutral-700 font-semibold text-xs text-white rounded-lg flex items-center gap-1.5 transition-all cursor-pointer border border-neutral-700">
+                        <i data-lucide="file-text" class="w-3.5 h-3.5"></i> <span class="hidden sm:inline">PDF</span>
                     </button>
-                    <button onclick="cargarInvitados()" class="h-9 px-3.5 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700 font-semibold text-xs text-slate-700 dark:text-slate-200 rounded-lg flex items-center gap-1.5 transition-all cursor-pointer shadow-sm">
-                        <i data-lucide="rotate-cw" class="w-3.5 h-3.5"></i> Actualizar
+                    <button onclick="cargarInvitados()" class="h-9 px-3 bg-neutral-900 hover:bg-neutral-800 border border-neutral-800 font-semibold text-xs text-neutral-300 rounded-lg flex items-center gap-1.5 transition-all cursor-pointer">
+                        <i data-lucide="rotate-cw" class="w-3.5 h-3.5"></i>
                     </button>
                 </div>
             </header>
 
-            <!-- DASHBOARD CONTENT (SCROLLABLE) -->
-            <main class="flex-1 overflow-y-auto p-6 space-y-6 bg-slate-50 dark:bg-slate-950 transition-colors duration-200">
+            <main class="flex-1 overflow-y-auto p-4 md:p-6 space-y-6 bg-black transition-colors duration-200">
 
-                <!-- STATS CARDS & RESUMEN UNIFICADOS EN LA MISMA FILA -->
-                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-4">
-                    <div class="bg-white dark:bg-slate-900 p-5 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm flex items-center justify-between">
-                        <div>
-                            <p class="text-[11px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Total Adultos</p>
-                            <p id="stat-adultos" class="text-2xl font-bold text-slate-900 dark:text-white mt-1">0</p>
-                        </div>
-                        <div class="w-10 h-10 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 flex items-center justify-center">
-                            <i data-lucide="users" class="w-5 h-5"></i>
-                        </div>
-                    </div>
-                    <div class="bg-white dark:bg-slate-900 p-5 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm flex items-center justify-between">
-                        <div>
-                            <p class="text-[11px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Total Niños</p>
-                            <p id="stat-ninos" class="text-2xl font-bold text-slate-900 dark:text-white mt-1">0</p>
-                        </div>
-                        <div class="w-10 h-10 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 flex items-center justify-center">
-                            <i data-lucide="baby" class="w-5 h-5"></i>
-                        </div>
-                    </div>
-                    <div class="bg-white dark:bg-slate-900 p-5 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm flex items-center justify-between">
-                        <div>
-                            <p class="text-[11px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Menús de Carne</p>
-                            <p id="stat-carne" class="text-2xl font-bold text-slate-900 dark:text-white mt-1">0</p>
-                        </div>
-                        <div class="w-10 h-10 rounded-lg bg-orange-50 dark:bg-orange-950/40 text-orange-600 dark:text-orange-400 flex items-center justify-center">
-                            <i data-lucide="utensils" class="w-5 h-5"></i>
-                        </div>
-                    </div>
-                    <div class="bg-white dark:bg-slate-900 p-5 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm flex items-center justify-between">
-                        <div>
-                            <p class="text-[11px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Menús de Pescado</p>
-                            <p id="stat-pescado" class="text-2xl font-bold text-slate-900 dark:text-white mt-1">0</p>
-                        </div>
-                        <div class="w-10 h-10 rounded-lg bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 flex items-center justify-center">
-                            <i data-lucide="fish" class="w-5 h-5"></i>
-                        </div>
-                    </div>
-                    <!-- RECUADRO RESUMEN ECONÓMICO (POSICIONADO A LA DERECHA DE MENÚS DE PESCADO) -->
-                    <div class="bg-white dark:bg-slate-900 p-5 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm lg:col-span-2 flex flex-col justify-between">
-                        <div class="flex items-center justify-between mb-2">
-                            <div class="flex items-center gap-2">
-                                <div class="w-7 h-7 rounded-lg bg-teal-50 dark:bg-teal-950/40 text-teal-600 dark:text-teal-400 flex items-center justify-center">
-                                    <i data-lucide="receipt" class="w-3.5 h-3.5"></i>
-                                </div>
-                                <h3 class="font-bold text-slate-900 dark:text-white text-xs">Resumen de este grupo</h3>
+                <div id="vista-asistencia" class="space-y-6">
+                    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-4">
+                        <div class="bg-[#111111] p-5 rounded-xl border border-neutral-800 shadow-sm flex items-center justify-between">
+                            <div>
+                                <p class="text-[11px] font-bold text-neutral-500 uppercase tracking-wider">Total Adultos</p>
+                                <p id="stat-adultos" class="text-2xl font-bold text-white mt-1">0</p>
                             </div>
-                            <span id="stat-subtotal-badge" class="px-2.5 py-0.5 rounded-lg text-[11px] font-bold bg-teal-50 dark:bg-teal-950/60 text-teal-700 dark:text-teal-400">SUBTOTAL: 0 €</span>
+                            <div class="w-10 h-10 rounded-lg bg-neutral-900 text-neutral-300 flex items-center justify-center border border-neutral-800">
+                                <i data-lucide="users" class="w-5 h-5"></i>
+                            </div>
                         </div>
-                        <div class="space-y-1 text-xs text-slate-600 dark:text-slate-400 border-t border-slate-100 dark:border-slate-800 pt-2">
-                            <p id="resumen-linea-1" class="font-medium text-[11px]">• Adultos: 0 (0 €) | Niños: 0 (0 €)</p>
-                            <p id="resumen-linea-2" class="font-medium text-[11px]">• Menús: 0 Carne | 0 Pescado</p>
+                        <div class="bg-[#111111] p-5 rounded-xl border border-neutral-800 shadow-sm flex items-center justify-between">
+                            <div>
+                                <p class="text-[11px] font-bold text-neutral-500 uppercase tracking-wider">Total Niños</p>
+                                <p id="stat-ninos" class="text-2xl font-bold text-white mt-1">0</p>
+                            </div>
+                            <div class="w-10 h-10 rounded-lg bg-neutral-900 text-neutral-300 flex items-center justify-center border border-neutral-800">
+                                <i data-lucide="baby" class="w-5 h-5"></i>
+                            </div>
+                        </div>
+                        <div class="bg-[#111111] p-5 rounded-xl border border-neutral-800 shadow-sm flex items-center justify-between">
+                            <div>
+                                <p class="text-[11px] font-bold text-neutral-500 uppercase tracking-wider">Menús de Carne</p>
+                                <p id="stat-carne" class="text-2xl font-bold text-white mt-1">0</p>
+                            </div>
+                            <div class="w-10 h-10 rounded-lg bg-neutral-900 text-neutral-300 flex items-center justify-center border border-neutral-800">
+                                <i data-lucide="utensils" class="w-5 h-5"></i>
+                            </div>
+                        </div>
+                        <div class="bg-[#111111] p-5 rounded-xl border border-neutral-800 shadow-sm flex items-center justify-between">
+                            <div>
+                                <p class="text-[11px] font-bold text-neutral-500 uppercase tracking-wider">Menús de Pescado</p>
+                                <p id="stat-pescado" class="text-2xl font-bold text-white mt-1">0</p>
+                            </div>
+                            <div class="w-10 h-10 rounded-lg bg-neutral-900 text-neutral-300 flex items-center justify-center border border-neutral-800">
+                                <i data-lucide="fish" class="w-5 h-5"></i>
+                            </div>
+                        </div>
+                        <div class="bg-[#111111] p-5 rounded-xl border border-neutral-800 shadow-sm lg:col-span-2 flex flex-col justify-between">
+                            <div class="flex items-center justify-between mb-2">
+                                <div class="flex items-center gap-2">
+                                    <div class="w-7 h-7 rounded-lg bg-neutral-900 text-neutral-300 flex items-center justify-center border border-neutral-800">
+                                        <i data-lucide="receipt" class="w-3.5 h-3.5"></i>
+                                    </div>
+                                    <h3 class="font-bold text-white text-xs">Resumen de este grupo</h3>
+                                </div>
+                                <span id="stat-subtotal-badge" class="px-2.5 py-0.5 rounded-lg text-[11px] font-bold bg-neutral-800 text-white border border-neutral-700">SUBTOTAL: 0 €</span>
+                            </div>
+                            <div class="space-y-1 text-xs text-neutral-400 border-t border-neutral-800 pt-2">
+                                <p id="resumen-linea-1" class="font-medium text-[11px]">• Adultos: 0 (0 €) | Niños: 0 (0 €)</p>
+                                <p id="resumen-linea-2" class="font-medium text-[11px]">• Menús: 0 Carne | 0 Pescado</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="bg-[#111111] rounded-xl shadow-sm border border-neutral-800 overflow-hidden">
+                        <div class="px-6 py-4 border-b border-neutral-800 flex justify-between items-center">
+                            <h2 class="font-bold text-white text-sm">Listado de Invitados</h2>
+                            <span class="text-xs text-neutral-500 flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-white inline-block"></span> Sincronizado con Supabase</span>
+                        </div>
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-left border-collapse">
+                                <thead>
+                                    <tr class="bg-black border-b border-neutral-800 text-[11px] font-bold text-neutral-500 uppercase tracking-wider">
+                                        <th class="py-3 px-6">Invitado / Acompañante</th>
+                                        <th class="py-3 px-6">Tipo</th>
+                                        <th class="py-3 px-6">Menú</th>
+                                        <th class="py-3 px-6">Precio</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="tabla-cuerpo" class="divide-y divide-neutral-800 text-sm text-neutral-300">
+                                    </tbody>
+                            </table>
                         </div>
                     </div>
                 </div>
 
-                <!-- TABLE SECTION -->
-                <div class="bg-white dark:bg-slate-900 rounded-xl shadow-sm border border-slate-200 dark:border-slate-800 overflow-hidden">
-                    <div class="px-6 py-4 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center">
-                        <h2 class="font-bold text-slate-900 dark:text-white text-sm">Listado de Invitados</h2>
-                        <span class="text-xs text-slate-400 dark:text-slate-500 flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-emerald-500 inline-block"></span> Sincronizado con Supabase</span>
-                    </div>
-                    <div class="overflow-x-auto">
-                        <table class="w-full text-left border-collapse">
-                            <thead>
-                                <tr class="bg-slate-50 dark:bg-slate-900/50 border-b border-slate-100 dark:border-slate-800 text-[11px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">
-                                    <th class="py-3 px-6">Invitado / Acompañante</th>
-                                    <th class="py-3 px-6">Tipo</th>
-                                    <th class="py-3 px-6">Menú</th>
-                                    <th class="py-3 px-6">Precio</th>
-                                </tr>
-                            </thead>
-                            <tbody id="tabla-cuerpo" class="divide-y divide-slate-100 dark:divide-slate-800/60 text-sm text-slate-700 dark:text-slate-300">
-                                <!-- Se llena dinámicamente -->
-                            </tbody>
-                        </table>
-                    </div>
+                <div id="vista-mesas" class="hidden space-y-6">
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6" id="mesas-container">
+                        </div>
                 </div>
 
             </main>
@@ -243,7 +281,6 @@
     const CLAVE_OCULTA = "Ym9kYTIwMjY=";
     const PRECIO_ADULTO = 118;
     const PRECIO_NINO = 38.5;
-    const ADELANTO_PAGADO = 1000;
 
     let supabaseClient = null;
     let listaGlobalDatos = [];
@@ -268,24 +305,55 @@
         ]
     };
 
+    const mesasData = [
+        {
+            title: "MESA 1",
+            description: "7 Personas asignadas a esta mesa.",
+            guests: ["Ada López Osca", "Carlos Ibáñez López", "Miguel López Pardo", "Jose Maria Crespo", "Irene Sanchez", "Ignacio Miguel Muñoz Escanella", "Marina Estrada Fortes"]
+        },
+        {
+            title: "MESA 2",
+            description: "6 Personas asignadas a esta mesa.",
+            guests: ["Joaquin Gimenez Gonzalez", "Carmen Soler Rodriguez", "Ramón Soler Mariño", "Carmen Rodríguez Magaña", "Presentación González Guillén", "Tatá"]
+        },
+        {
+            title: "MESA 3",
+            description: "9 Personas asignadas a esta mesa.",
+            guests: ["Isabel Tita", "Abuelo", "Abuela", "Caridad Bermejo Valero", "Mari Ángeles Rodríguez", "Daniel Soler Mariño", "José Luis Saldaña Rodríguez", "Thais Soler Rodriguez", "Ernesto Jover Sánchez"]
+        },
+        {
+            title: "MESA 4",
+            description: "6 Personas asignadas a esta mesa.",
+            guests: ["M. Pilar Forte López", "Fernando González Guillen", "Pilar Forte", "Benjamín", "Miguel González Forte", "María Viciana Segura"]
+        },
+        {
+            title: "MESA 5",
+            description: "7 Personas asignadas a esta mesa.",
+            guests: ["Fernando Gimenez", "Lucia Asensio", "David Rubira Moreno", "Natalia Rubira Gimenez", "Belén Rubira Gimenez", "Pedro Jesús Fernández González", "Ana hermana"]
+        },
+        {
+            title: "MESA NIÑOS",
+            description: "5 Personas asignadas a esta mesa.",
+            guests: ["Julia", "Alex", "Daniela", "Pilar hijo", "Emma"]
+        }
+    ];
+
     function normalizarTexto(str) {
         if (!str) return '';
         return str.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
     }
 
-    function toggleDarkMode() {
-        const html = document.documentElement;
-        if (html.classList.contains('dark')) {
-            html.classList.remove('dark');
-            localStorage.setItem('theme', 'light');
-        } else {
-            html.classList.add('dark');
-            localStorage.setItem('theme', 'dark');
-        }
+    function toggleMobileSidebar() {
+        const sidebar = document.getElementById('mobile-sidebar');
+        const overlay = document.getElementById('sidebar-overlay');
+        sidebar.classList.toggle('open');
+        overlay.classList.toggle('hidden');
     }
 
-    if (localStorage.getItem('theme') === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
-        document.documentElement.classList.add('dark');
+    function toggleMobileSidebarIfMobile() {
+        if (window.innerWidth < 768) {
+            toggleMobileSidebar();
+        }
     }
 
     function verificarPassword() {
@@ -301,6 +369,7 @@
             supabaseClient = supabase.createClient(u, k);
 
             cargarInvitados();
+            renderizarMesas();
         } else {
             alert("Contraseña incorrecta ❌");
         }
@@ -309,17 +378,104 @@
     function cambiarFiltro(grupo, elemento) {
         filtroActual = grupo;
         
-        document.querySelectorAll('#sidebar-menu a').forEach(a => {
-            a.classList.remove('bg-slate-100', 'dark:bg-slate-800/80', 'text-slate-900', 'dark:text-slate-100', 'font-semibold');
-            a.classList.add('text-slate-600', 'dark:text-slate-400', 'font-medium');
-        });
-        elemento.classList.add('bg-slate-100', 'dark:bg-slate-800/80', 'text-slate-900', 'dark:text-slate-100', 'font-semibold');
-        elemento.classList.remove('text-slate-600', 'dark:text-slate-400', 'font-medium');
+        document.getElementById('vista-asistencia').classList.remove('hidden');
+        document.getElementById('vista-mesas').classList.add('hidden');
+        document.getElementById('header-actions').style.display = 'flex';
 
-        const tituloHeader = grupo === 'todos' ? 'Resumen de Asistencia y Menús (Todos los Invitados)' : `Resumen de Asistencia y Menús (${grupo})`;
+        document.querySelectorAll('#sidebar-menu a').forEach(a => {
+            a.classList.remove('bg-neutral-900', 'text-white', 'font-semibold');
+            a.classList.add('text-neutral-400', 'font-medium');
+        });
+        document.querySelectorAll('aside nav div:nth-child(2) a').forEach(a => {
+            a.classList.remove('bg-neutral-900', 'text-white', 'font-semibold');
+            a.classList.add('text-neutral-400', 'font-medium');
+        });
+
+        elemento.classList.add('bg-neutral-900', 'text-white', 'font-semibold');
+        elemento.classList.remove('text-neutral-400', 'font-medium');
+
+        const tituloHeader = grupo === 'todos' ?
+            'Resumen de Asistencia y Menús (Todos los Invitados)' : `Resumen de Asistencia y Menús (${grupo})`;
         document.getElementById('header-title').innerText = tituloHeader;
 
         renderizarTablaYEstadisticas();
+    }
+
+    function mostrarSeccionMesas(elemento) {
+        document.getElementById('vista-asistencia').classList.add('hidden');
+        document.getElementById('vista-mesas').classList.remove('hidden');
+        document.getElementById('header-title').innerText = 'Organización de Mesas y Comensales';
+        document.getElementById('header-actions').style.display = 'none';
+
+        document.querySelectorAll('#sidebar-menu a').forEach(a => {
+            a.classList.remove('bg-neutral-900', 'text-white', 'font-semibold');
+            a.classList.add('text-neutral-400', 'font-medium');
+        });
+        document.querySelectorAll('aside nav div:nth-child(2) a').forEach(a => {
+            a.classList.add('bg-neutral-900', 'text-white', 'font-semibold');
+            a.classList.remove('text-neutral-400', 'font-medium');
+        });
+    }
+
+    function renderizarMesas() {
+        const container = document.getElementById('mesas-container');
+        container.innerHTML = mesasData.map((mesa, index) => {
+            const guestsListHTML = mesa.guests.map(g => `
+                <li class="text-sm text-neutral-300 flex items-center gap-2 py-1 border-b border-neutral-800 last:border-0">
+                    <span class="w-1.5 h-1.5 rounded-full bg-neutral-500"></span>
+                    ${g}
+                </li>
+            `).join('');
+
+            return `
+            <div class="card-mesa" id="card-mesa-${index}">
+                <div class="flex justify-end mb-[-0.5rem]">
+                    <i data-lucide="x" class="w-4 h-4 text-neutral-500 hover:text-white cursor-pointer" onclick="handleCloseMesa(${index})"></i>
+                </div>
+                <div class="flex gap-4 items-start">
+                    <i data-lucide="check-circle" class="w-6 h-6 text-white shrink-0 mt-0.5"></i>
+                    <div class="w-full">
+                        <h3 class="font-semibold text-lg text-white mb-1">${mesa.title}</h3>
+                        <p class="text-sm text-neutral-400 mb-4">${mesa.description}</p>
+                        
+                        <div class="guests-container" id="guests-${index}">
+                            <div class="bg-black rounded-lg p-3 border border-neutral-800 mt-2">
+                                <span class="text-xs font-bold uppercase tracking-wider text-neutral-400 block mb-2">Comensales</span>
+                                <ul class="space-y-1">
+                                    ${guestsListHTML}
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="flex items-center gap-3 mt-4 pt-4 border-t border-neutral-900">
+                    <a href="#" class="bg-white hover:bg-neutral-200 text-black px-4 py-2 rounded-lg text-sm font-semibold text-center flex-1 transition-colors block" onclick="toggleGuests(event, ${index})">Mostrar comensales</a>
+                </div>
+            </div>
+            `;
+        }).join('');
+        lucide.createIcons();
+    }
+
+    function toggleGuests(event, index) {
+        event.preventDefault();
+        const guestsDiv = document.getElementById(`guests-${index}`);
+        const btn = event.currentTarget;
+        
+        if (guestsDiv.classList.contains('expanded')) {
+            guestsDiv.classList.remove('expanded');
+            btn.textContent = 'Mostrar comensales';
+        } else {
+            guestsDiv.classList.add('expanded');
+            btn.textContent = 'Ocultar comensales';
+        }
+    }
+
+    function handleCloseMesa(index) {
+        const card = document.getElementById(`card-mesa-${index}`);
+        card.style.opacity = '0';
+        setTimeout(() => card.style.display = 'none', 300);
     }
 
     function obtenerGrupoAsistente(nombre, grupoPrincipalPorDefecto) {
@@ -335,15 +491,12 @@
 
     async function cargarInvitados() {
         if (!supabaseClient) return;
-
         const cuerpo = document.getElementById('tabla-cuerpo');
-        cuerpo.innerHTML = `<tr><td colspan="4" class="text-center py-8 text-slate-400 dark:text-slate-500 animate-pulse">Cargando invitados...</td></tr>`;
-
+        cuerpo.innerHTML = `<tr><td colspan="4" class="text-center py-8 text-neutral-500 animate-pulse">Cargando invitados...</td></tr>`;
         const { data, error } = await supabaseClient
             .from('asistencias')
             .select('*')
             .order('id', { ascending: false });
-
         if (error) {
             alert("Error al cargar datos: " + error.message);
             return;
@@ -355,7 +508,6 @@
 
     function obtenerListaAsistentesProcesada() {
         let asistentes = [];
-
         listaGlobalDatos.forEach(item => {
             let grupoPrincipal = 'Amigos';
             const principalLimpio = normalizarTexto(item.invitado_principal);
@@ -398,7 +550,6 @@
                 }
             }
         });
-
         return asistentes;
     }
 
@@ -414,7 +565,6 @@
         let totalNinos = 0;
         let totalCarne = 0;
         let totalPescado = 0;
-
         filasProcesadas.forEach(row => {
             if (row.tipo === 'Adulto') {
                 totalAdultos++;
@@ -424,11 +574,9 @@
                 totalNinos++;
             }
         });
-
         const costeAdultos = totalAdultos * PRECIO_ADULTO;
         const costeNinos = totalNinos * PRECIO_NINO;
         const subtotalSinAdelanto = costeAdultos + costeNinos;
-
         return { 
             totalAdultos, 
             totalNinos, 
@@ -446,9 +594,8 @@
 
         const filasProcesadas = getAsistentesFiltrados();
         const totales = calcularTotalesGenerales();
-
         if (filasProcesadas.length === 0) {
-            cuerpo.innerHTML = `<tr><td colspan="4" class="text-center py-8 text-slate-400 dark:text-slate-500">No hay confirmaciones en este grupo.</td></tr>`;
+            cuerpo.innerHTML = `<tr><td colspan="4" class="text-center py-8 text-neutral-500">No hay confirmaciones en este grupo.</td></tr>`;
             document.getElementById('stat-adultos').innerText = 0;
             document.getElementById('stat-ninos').innerText = 0;
             document.getElementById('stat-carne').innerText = 0;
@@ -462,28 +609,26 @@
 
         filasProcesadas.forEach(row => {
             const tr = document.createElement('tr');
-            tr.className = "hover:bg-slate-50/80 dark:hover:bg-slate-800/40 transition-colors";
+            tr.className = "hover:bg-neutral-900/50 transition-colors";
             tr.innerHTML = `
-                <td class="py-3 px-6 font-medium text-slate-900 dark:text-slate-100">${row.nombre}</td>
+                <td class="py-3 px-6 font-medium text-white">${row.nombre}</td>
                 <td class="py-3 px-6">
-                    <span class="px-2.5 py-0.5 rounded-md text-xs font-semibold ${row.tipo === 'Adulto' ? 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300' : 'bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-400'}">${row.tipo}</span>
+                    <span class="px-2.5 py-0.5 rounded-md text-xs font-semibold bg-neutral-900 text-neutral-300 border border-neutral-800">${row.tipo}</span>
                 </td>
                 <td class="py-3 px-6">
-                    <span class="px-2.5 py-0.5 rounded-md text-xs font-semibold ${row.menu === 'Carne' ? 'bg-orange-50 dark:bg-orange-950/60 text-orange-700 dark:text-orange-400' : (row.menu === 'Pescado' ? 'bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-400' : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300')}">${row.menu}</span>
+                    <span class="px-2.5 py-0.5 rounded-md text-xs font-semibold bg-neutral-900 text-neutral-300 border border-neutral-800">${row.menu}</span>
                 </td>
-                <td class="py-3 px-6 font-semibold text-slate-900 dark:text-slate-100">${row.precio} €</td>
+                <td class="py-3 px-6 font-semibold text-white">${row.precio} €</td>
             `;
             cuerpo.appendChild(tr);
         });
 
-        // Actualizar Tarjetas Superiores
         document.getElementById('stat-adultos').innerText = totales.totalAdultos;
         document.getElementById('stat-ninos').innerText = totales.totalNinos;
         document.getElementById('stat-carne').innerText = totales.totalCarne;
         document.getElementById('stat-pescado').innerText = totales.totalPescado;
 
-        // Actualizar Recuadro Resumen Estilo PDF
-        document.getElementById('resumen-linea-1').innerText = `• Adultos: ${totales.totalAdultos} (${totales.costeAdultos} €) | Niños: ${totales.totalNinos} (${totales.costeNinos} €)`;
+        document.getElementById('resumen-linea-1').innerText = `• Adultos: ${totales.totalAdultos} (${totales.costeAdultos} €)   |   Niños: ${totales.totalNinos} (${totales.costeNinos} €)`;
         document.getElementById('resumen-linea-2').innerText = `• Menús: ${totales.totalCarne} Carne | ${totales.totalPescado} Pescado`;
         document.getElementById('stat-subtotal-badge').innerText = `SUBTOTAL: ${totales.subtotalSinAdelanto} €`;
 
@@ -499,18 +644,15 @@
 
         const totales = calcularTotalesGenerales();
         let datosExcel = [];
-
         datosExcel.push({ "Invitado / Acompañante": `BODA CARMEN Y JOAQUÍN - ${filtroActual.toUpperCase()}`, "Tipo": "", "Menú": "", "Precio": "" });
         datosExcel.push({ "Invitado / Acompañante": `Fecha de exportación: ${new Date().toLocaleDateString()}`, "Tipo": "", "Menú": "", "Precio": "" });
-        datosExcel.push({}); 
-
+        datosExcel.push({});
         datosExcel.push({ 
             "Invitado / Acompañante": "NOMBRE DEL INVITADO / ACOMPAÑANTE", 
             "Tipo": "TIPO ASISTENTE", 
             "Menú": "MENÚ SELECCIONADO", 
             "Precio": "PRECIO UNITARIO" 
         });
-
         filasProcesadas.forEach(row => {
             datosExcel.push({
                 "Invitado / Acompañante": row.nombre,
@@ -526,7 +668,6 @@
         datosExcel.push({ "Invitado / Acompañante": `Total Niños (${totales.totalNinos} personas)`, "Tipo": "", "Menú": "", "Precio": totales.costeNinos });
         datosExcel.push({ "Invitado / Acompañante": `Desglose Menús: ${totales.totalCarne} Carne | ${totales.totalPescado} Pescado`, "Tipo": "", "Menú": "", "Precio": "" });
         datosExcel.push({ "Invitado / Acompañante": "SUBTOTAL GRUPO", "Tipo": "", "Menú": "", "Precio": totales.subtotalSinAdelanto });
-
         const worksheet = XLSX.utils.json_to_sheet(datosExcel, { skipHeader: true });
 
         worksheet['!cols'] = [
@@ -535,7 +676,6 @@
             { wch: 25 },
             { wch: 18 }
         ];
-
         const workbook = XLSX.utils.book_new();
         XLSX.utils.book_append_sheet(workbook, worksheet, "Resumen Boda");
         XLSX.writeFile(workbook, `Listado_${filtroActual.replace(/\s+/g, '_')}.xlsx`);
@@ -550,12 +690,10 @@
 
         const { jsPDF } = window.jspdf;
         const totales = calcularTotalesGenerales();
-
         let filasPdf = [];
         filasProcesadas.forEach(row => {
             filasPdf.push([row.nombre, row.tipo, row.menu, `${row.precio} €`]);
         });
-
         const alturaTituloyEspacios = 80;
         const alturaPorFila = 8;
         const alturaNecesaria = alturaTituloyEspacios + (filasPdf.length * alturaPorFila);
@@ -566,15 +704,14 @@
             unit: 'mm',
             format: [210, alturaPaginaUnica]
         });
-
         doc.setFont("helvetica", "bold");
         doc.setFontSize(14);
-        doc.setTextColor(15, 118, 110);
+        doc.setTextColor(0, 0, 0);
         doc.text(`Boda Carmen y Joaquín — ${filtroActual}`, 12, 12);
 
         doc.setFontSize(8);
         doc.setFont("helvetica", "normal");
-        doc.setTextColor(100, 116, 139);
+        doc.setTextColor(100, 100, 100);
         doc.text(`Listado oficial de asistentes — ${new Date().toLocaleDateString()}`, 12, 16);
 
         doc.autoTable({
@@ -582,28 +719,20 @@
             head: [['Invitado / Acompañante', 'Tipo', 'Menú', 'Precio']],
             body: filasPdf,
             theme: 'striped',
-            headStyles: { fillColor: [15, 118, 110], fontSize: 8, fontStyle: 'bold', cellPadding: 2 },
+            headStyles: { fillColor: [30, 30, 30], fontSize: 8, fontStyle: 'bold', cellPadding: 2 },
             bodyStyles: { fontSize: 7.5, cellPadding: 1.5 },
-            alternateRowStyles: { fillColor: [248, 250, 252] },
-            didParseCell: function(data) {
-                if (data.section === 'body' && data.row.raw[1] === 'Niño') {
-                    data.cell.styles.fillColor = [220, 252, 231]; 
-                    data.cell.styles.textColor = [6, 95, 70];    
-                }
-            },
+            alternateRowStyles: { fillColor: [245, 245, 245] },
             margin: { left: 12, right: 12, bottom: 10 }
         });
-
         let finalY = doc.lastAutoTable.finalY + 5;
 
-        doc.setFillColor(241, 245, 249);
+        doc.setFillColor(240, 240, 240);
         doc.setLineWidth(0.2);
-        doc.setDrawColor(203, 213, 225);
+        doc.setDrawColor(200, 200, 200);
         doc.roundedRect(12, finalY, 186, 28, 2, 2, 'FD');
-
         doc.setFont("helvetica", "bold");
         doc.setFontSize(9);
-        doc.setTextColor(30, 41, 59);
+        doc.setTextColor(0, 0, 0);
         doc.text("Resumen de este grupo", 16, finalY + 5);
 
         doc.setFont("helvetica", "normal");
@@ -613,7 +742,7 @@
 
         doc.setFont("helvetica", "bold");
         doc.setFontSize(8.5);
-        doc.setTextColor(15, 118, 110);
+        doc.setTextColor(0, 0, 0);
         doc.text(`SUBTOTAL GRUPO: ${totales.subtotalSinAdelanto} €`, 16, finalY + 22);
 
         doc.save(`Listado_${filtroActual.replace(/\s+/g, '_')}.pdf`);
