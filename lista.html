@@ -442,7 +442,7 @@
 
             calcularDiasRestantes();
             cargarInvitados();
-            cargarMesasSupabase(); // Carga las mesas desde Supabase
+            cargarMesasSupabase();
         } else {
             alert("Contraseña incorrecta ❌");
         }
@@ -464,7 +464,6 @@
             mesasData = data.configuracion;
         }
         
-        // Refrescar el dibujo si estamos en la vista de mesas
         if(!document.getElementById('vista-mesas').classList.contains('hidden')){
             renderizarMesas();
         }
@@ -476,7 +475,6 @@
             return;
         }
 
-        // Actualizar títulos actuales del DOM por si el usuario editó alguno sin perder el foco
         document.querySelectorAll('.mesa-wrapper').forEach((wrapper, idx) => {
             const titleEl = wrapper.querySelector('.mesa-title');
             if (titleEl && mesasData[idx]) {
@@ -573,16 +571,13 @@
         const contenedorLista = document.getElementById('lista-invitados-libres');
         contenedorLista.innerHTML = '';
 
-        // Obtener nombres ya asignados en cualquier mesa (normalizados)
         const asignadosSet = new Set();
         mesasData.forEach(m => m.guests.forEach(g => asignadosSet.add(normalizarTexto(g))));
 
-        // Recopilar todos los nombres únicos válidos de listaAsistentesLocal que NO están asignados
         const disponibles = [];
         listaAsistentesLocal.forEach(item => {
             const nombreNormalizado = normalizarTexto(item.nombre);
             if (!asignadosSet.has(nombreNormalizado)) {
-                // Verificar si ya está en la lista de disponibles para evitar duplicados exactos
                 if (!disponibles.some(d => normalizarTexto(d) === nombreNormalizado)) {
                     disponibles.push(item.nombre);
                 }
@@ -793,8 +788,11 @@
                 }
             }
 
+            // Invitado Principal
             asistentes.push({
                 id: idCounter++,
+                dbId: item.id,
+                tipoElemento: 'principal',
                 nombre: item.invitado_principal,
                 tipo: 'Adulto',
                 menu: item.menu_principal || '-',
@@ -802,10 +800,13 @@
                 grupo: grupoPrincipal
             });
 
+            // Acompañante
             if (item.acompanante && item.acompanante !== 'Ninguno' && item.acompanante.trim() !== '') {
                 let grupoAcompañante = obtenerGrupoAsistente(item.acompanante, grupoPrincipal);
                 asistentes.push({
                     id: idCounter++,
+                    dbId: item.id,
+                    tipoElemento: 'acompanante',
                     nombre: item.acompanante,
                     tipo: 'Adulto',
                     menu: item.menu_acompanante || '-',
@@ -814,11 +815,15 @@
                 });
             }
 
+            // Niños
             const numNinos = parseInt(item.ninos || 0);
             if (numNinos > 0) {
                 for (let i = 1; i <= numNinos; i++) {
                     asistentes.push({
                         id: idCounter++,
+                        dbId: item.id,
+                        tipoElemento: 'nino',
+                        totalNinosActuales: numNinos,
                         nombre: `Niño/a de ${item.invitado_principal} (${i})`,
                         tipo: 'Niño',
                         menu: 'Menú Infantil',
@@ -844,9 +849,46 @@
         }
     }
 
-    function eliminarAsistente(id) {
-        listaAsistentesLocal = listaAsistentesLocal.filter(a => a.id !== id);
-        renderizarTablaYEstadisticas();
+    async function eliminarAsistente(id) {
+        const asistente = listaAsistentesLocal.find(a => a.id === id);
+        if (!asistente) return;
+
+        const confirmar = confirm(`¿Estás seguro de que deseas eliminar permanentemente a "${asistente.nombre}"?`);
+        if (!confirmar) return;
+
+        if (!supabaseClient) {
+            alert("Error: Supabase no está conectado.");
+            return;
+        }
+
+        let error = null;
+
+        if (asistente.tipoElemento === 'principal') {
+            const res = await supabaseClient
+                .from('asistencias')
+                .delete()
+                .eq('id', asistente.dbId);
+            error = res.error;
+        } else if (asistente.tipoElemento === 'acompanante') {
+            const res = await supabaseClient
+                .from('asistencias')
+                .update({ acompanante: null, menu_acompanante: null })
+                .eq('id', asistente.dbId);
+            error = res.error;
+        } else if (asistente.tipoElemento === 'nino') {
+            const nuevosNinos = Math.max(0, (asistente.totalNinosActuales || 1) - 1);
+            const res = await supabaseClient
+                .from('asistencias')
+                .update({ ninos: nuevosNinos })
+                .eq('id', asistente.dbId);
+            error = res.error;
+        }
+
+        if (error) {
+            alert("Error al eliminar en Supabase: " + error.message);
+        } else {
+            cargarInvitados();
+        }
     }
 
     function calcularTotalesGenerales() {
@@ -918,7 +960,7 @@
                 </td>
                 <td class="py-3 px-6 font-semibold text-white">${row.precio} €</td>
                 <td class="py-3 px-6 text-right">
-                    <button onclick="eliminarAsistente(${row.id})" class="p-1.5 bg-red-900/10 text-red-500 hover:bg-red-900/40 rounded-lg transition-colors border border-red-900/30" title="Eliminar Invitado">
+                    <button onclick="eliminarAsistente(${row.id})" class="p-1.5 bg-red-900/10 text-red-500 hover:bg-red-900/40 rounded-lg transition-colors border border-red-900/30 cursor-pointer" title="Eliminar Invitado">
                         <i data-lucide="trash-2" class="w-4 h-4"></i>
                     </button>
                 </td>
