@@ -57,9 +57,15 @@
         /* Estilos para Mesas Redondas y Drag & Drop */
         .mesa-wrapper { position: relative; width: 320px; height: 320px; margin: 2rem auto; border-radius: 50%; border: 2px dashed #333; background: radial-gradient(circle, #1a1a1a 0%, #050505 100%); transition: all 0.3s ease; display: flex; align-items: center; justify-content: center; box-shadow: inset 0 0 40px rgba(0,0,0,0.8); }
         .mesa-wrapper.drag-over { border-color: #666; background: radial-gradient(circle, #2a2a2a 0%, #111 100%); transform: scale(1.02); }
-        .mesa-title { position: absolute; font-weight: 700; font-size: 1.1rem; color: #fff; text-align: center; outline: none; padding: 0.5rem; min-width: 100px; z-index: 5; text-shadow: 0 2px 4px rgba(0,0,0,0.8); cursor: text; border-radius: 6px; transition: background 0.2s; }
+        .mesa-title { position: absolute; top: 75px; font-weight: 700; font-size: 1.1rem; color: #fff; text-align: center; outline: none; padding: 0.5rem; min-width: 100px; z-index: 5; text-shadow: 0 2px 4px rgba(0,0,0,0.8); cursor: text; border-radius: 6px; transition: background 0.2s; }
         .mesa-title:hover { background: rgba(255, 255, 255, 0.05); }
         
+        .delete-mesa-btn { position: absolute; top: 25px; right: 25px; width: 28px; height: 28px; background: rgba(239, 68, 68, 0.15); border: 1px solid rgba(239, 68, 68, 0.4); color: #f87171; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: all 0.2s; z-index: 20; }
+        .delete-mesa-btn:hover { background: rgba(239, 68, 68, 0.3); color: #fff; transform: scale(1.1); }
+
+        .add-guest-mesa-btn { position: absolute; bottom: 65px; width: 36px; height: 36px; background: rgba(255, 255, 255, 0.1); border: 1px dashed rgba(255, 255, 255, 0.3); color: #fff; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: all 0.2s; z-index: 20; }
+        .add-guest-mesa-btn:hover { background: rgba(255, 255, 255, 0.2); border-color: #fff; transform: scale(1.1); }
+
         .guest-circle { position: absolute; width: 44px; height: 44px; border-radius: 50%; background: linear-gradient(135deg, #2a2a2a 0%, #111 100%); border: 2px solid #555; display: flex; align-items: center; justify-content: center; cursor: grab; transform: translate(-50%, -50%); transition: border-color 0.2s; user-select: none; box-shadow: 0 4px 6px rgba(0,0,0,0.5); z-index: 10; }
         .guest-circle:hover { border-color: #888; z-index: 15; }
         .guest-circle.dragging { opacity: 0.5; cursor: grabbing; border-color: #fff; transform: translate(-50%, -50%) scale(1.1); }
@@ -90,6 +96,21 @@
                 <button onclick="verificarPassword()" class="w-full h-11 bg-white hover:bg-neutral-200 text-black font-semibold text-sm rounded-xl shadow-md transition-all cursor-pointer">
                     Acceder al Dashboard
                 </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal para añadir invitado a mesa -->
+    <div id="modal-agregar-invitado" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm hidden">
+        <div class="max-w-md w-full bg-gradient-to-br from-[#1c1c1c] to-[#0f0f0f] p-6 rounded-2xl shadow-2xl border border-neutral-800 flex flex-col max-h-[80vh]">
+            <div class="flex items-center justify-between mb-4 border-b border-neutral-800 pb-3">
+                <h3 class="font-bold text-white text-sm">Añadir Invitado sin Mesa</h3>
+                <button onclick="cerrarModalInvitado()" class="text-neutral-400 hover:text-white p-1">
+                    <i data-lucide="x" class="w-5 h-5"></i>
+                </button>
+            </div>
+            <div id="lista-invitados-libres" class="overflow-y-auto space-y-2 flex-1 pr-1">
+                <!-- Se llena dinámicamente -->
             </div>
         </div>
     </div>
@@ -288,15 +309,23 @@
                 </div>
 
                 <div id="vista-mesas" class="hidden space-y-6">
-                    <div class="flex items-center justify-between bg-neutral-900/40 p-4 rounded-xl border border-neutral-800/80 shadow-inner">
+                    <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 bg-neutral-900/40 p-4 rounded-xl border border-neutral-800/80 shadow-inner">
                         <div class="flex items-center gap-3">
-                            <div class="w-8 h-8 rounded-lg bg-neutral-800 text-neutral-300 flex items-center justify-center shadow-sm border border-neutral-700">
+                            <div class="w-8 h-8 rounded-lg bg-neutral-800 text-neutral-300 flex items-center justify-center shadow-sm border border-neutral-700 shrink-0">
                                 <i data-lucide="move" class="w-4 h-4"></i>
                             </div>
                             <div>
                                 <h3 class="font-bold text-white text-sm">Distribución de Mesas Redondas</h3>
-                                <p class="text-xs text-neutral-400 mt-0.5">Arrastra los círculos de invitados de una mesa a otra. Haz clic en el nombre de la mesa para editarlo.</p>
+                                <p class="text-xs text-neutral-400 mt-0.5">Arrastra los círculos de invitados entre mesas. Haz clic en el nombre de la mesa para editarlo o usa el botón de eliminar mesa.</p>
                             </div>
+                        </div>
+                        <div class="flex items-center gap-2 w-full sm:w-auto justify-end">
+                            <button onclick="guardarMesasLocal()" class="h-9 px-4 bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-xs rounded-lg flex items-center gap-2 transition-all cursor-pointer shadow-md shrink-0">
+                                <i data-lucide="save" class="w-4 h-4"></i> Guardar Cambios
+                            </button>
+                            <button onclick="crearNuevaMesa()" class="h-9 px-4 bg-white hover:bg-neutral-200 text-black font-semibold text-xs rounded-lg flex items-center gap-2 transition-all cursor-pointer shadow-md shrink-0">
+                                <i data-lucide="plus" class="w-4 h-4"></i> Crear Mesa
+                            </button>
                         </div>
                     </div>
                     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 py-4" id="mesas-container">
@@ -316,6 +345,7 @@
     let listaGlobalDatos = [];
     let listaAsistentesLocal = [];
     let filtroActual = 'todos';
+    let mesaSeleccionadaParaAnadir = null;
 
     const gruposListas = {
         "Amigos": [
@@ -336,7 +366,7 @@
         ]
     };
 
-    const mesasData = [
+    let mesasData = JSON.parse(localStorage.getItem('boda_mesas_config')) || [
         {
             title: "MESA 1",
             guests: ["Ada López Osca", "Carlos Ibáñez López", "Miguel López Pardo", "Jose Maria Crespo", "Irene Sanchez", "Ignacio Miguel Muñoz Escanella", "Marina Estrada Fortes"]
@@ -459,6 +489,83 @@
         renderizarMesas();
     }
 
+    function guardarMesasLocal() {
+        // Actualizar títulos actuales del DOM por si el usuario editó alguno sin perder el foco
+        document.querySelectorAll('.mesa-wrapper').forEach((wrapper, idx) => {
+            const titleEl = wrapper.querySelector('.mesa-title');
+            if (titleEl && mesasData[idx]) {
+                mesasData[idx].title = titleEl.textContent.trim();
+            }
+        });
+        localStorage.setItem('boda_mesas_config', JSON.stringify(mesasData));
+        alert("¡Configuración de mesas guardada correctamente! ✅");
+    }
+
+    function crearNuevaMesa() {
+        const nuevoNumero = mesasData.length + 1;
+        mesasData.push({
+            title: `MESA ${nuevoNumero}`,
+            guests: []
+        });
+        renderizarMesas();
+    }
+
+    function eliminarMesa(mIndex) {
+        const mesa = mesasData[mIndex];
+        if (mesa.guests.length > 0) {
+            const confirmar = confirm(`La mesa "${mesa.title}" tiene ${mesa.guests.length} invitado(s). ¿Estás seguro de que deseas eliminarla? Los invitados se perderán de esta mesa.`);
+            if (!confirmar) return;
+        }
+        mesasData.splice(mIndex, 1);
+        renderizarMesas();
+    }
+
+    function abrirModalInvitados(mIndex) {
+        mesaSeleccionadaParaAnadir = mIndex;
+        const modal = document.getElementById('modal-agregar-invitado');
+        const contenedorLista = document.getElementById('lista-invitados-libres');
+        contenedorLista.innerHTML = '';
+
+        // Obtener nombres ya asignados en cualquier mesa (normalizados)
+        const asignadosSet = new Set();
+        mesasData.forEach(m => m.guests.forEach(g => asignadosSet.add(normalizarTexto(g))));
+
+        // Recopilar todos los nombres únicos válidos de listaAsistentesLocal que NO están asignados
+        const disponibles = [];
+        listaAsistentesLocal.forEach(item => {
+            const nombreNormalizado = normalizarTexto(item.nombre);
+            if (!asignadosSet.has(nombreNormalizado)) {
+                // Verificar si ya está en la lista de disponibles para evitar duplicados exactos
+                if (!disponibles.some(d => normalizarTexto(d) === nombreNormalizado)) {
+                    disponibles.push(item.nombre);
+                }
+            }
+        });
+
+        if (disponibles.length === 0) {
+            contenedorLista.innerHTML = `<p class="text-xs text-neutral-500 text-center py-4">No hay invitados sin mesa asignada.</p>`;
+        } else {
+            disponibles.forEach(nombre => {
+                const btn = document.createElement('button');
+                btn.className = 'w-full text-left px-3 py-2.5 rounded-lg bg-neutral-900 hover:bg-neutral-800 border border-neutral-800 text-xs text-neutral-200 flex items-center justify-between transition-colors cursor-pointer';
+                btn.innerHTML = `<span>${nombre}</span> <span class="text-[10px] text-neutral-400 font-semibold bg-black/40 px-2 py-1 rounded">Añadir +</span>`;
+                btn.onclick = () => {
+                    mesasData[mesaSeleccionadaParaAnadir].guests.push(nombre);
+                    cerrarModalInvitado();
+                    renderizarMesas();
+                };
+                contenedorLista.appendChild(btn);
+            });
+        }
+
+        modal.classList.remove('hidden');
+    }
+
+    function cerrarModalInvitado() {
+        document.getElementById('modal-agregar-invitado').classList.add('hidden');
+        mesaSeleccionadaParaAnadir = null;
+    }
+
     let draggedGuest = null;
 
     function renderizarMesas() {
@@ -493,12 +600,32 @@
             title.addEventListener('mousedown', e => e.stopPropagation());
             mesaWrapper.appendChild(title);
 
+            const deleteBtn = document.createElement('button');
+            deleteBtn.className = 'delete-mesa-btn';
+            deleteBtn.innerHTML = '<i data-lucide="trash-2" class="w-3.5 h-3.5"></i>';
+            deleteBtn.title = 'Eliminar mesa';
+            deleteBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                eliminarMesa(mIndex);
+            });
+            mesaWrapper.appendChild(deleteBtn);
+
+            const addGuestBtn = document.createElement('button');
+            addGuestBtn.className = 'add-guest-mesa-btn';
+            addGuestBtn.innerHTML = '<i data-lucide="plus" class="w-4 h-4"></i>';
+            addGuestBtn.title = 'Añadir invitado a esta mesa';
+            addGuestBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                abrirModalInvitados(mIndex);
+            });
+            mesaWrapper.appendChild(addGuestBtn);
+
             const numGuests = mesa.guests.length;
             const radius = 120; 
             const center = 160; 
 
             mesa.guests.forEach((guestName, gIndex) => {
-                const angle = (gIndex / numGuests) * 2 * Math.PI - Math.PI / 2;
+                const angle = numGuests > 0 ? (gIndex / numGuests) * 2 * Math.PI - Math.PI / 2 : 0;
                 const x = center + radius * Math.cos(angle);
                 const y = center + radius * Math.sin(angle);
 
