@@ -320,7 +320,7 @@
                             </div>
                         </div>
                         <div class="flex items-center gap-2 w-full sm:w-auto justify-end">
-                            <button onclick="guardarMesasLocal()" class="h-9 px-4 bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-xs rounded-lg flex items-center gap-2 transition-all cursor-pointer shadow-md shrink-0">
+                            <button id="btn-guardar-mesas" onclick="guardarMesasSupabase()" class="h-9 px-4 bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-xs rounded-lg flex items-center gap-2 transition-all cursor-pointer shadow-md shrink-0">
                                 <i data-lucide="save" class="w-4 h-4"></i> Guardar Cambios
                             </button>
                             <button onclick="crearNuevaMesa()" class="h-9 px-4 bg-white hover:bg-neutral-200 text-black font-semibold text-xs rounded-lg flex items-center gap-2 transition-all cursor-pointer shadow-md shrink-0">
@@ -366,7 +366,8 @@
         ]
     };
 
-    let mesasData = JSON.parse(localStorage.getItem('boda_mesas_config')) || [
+    // Datos por defecto si no existe configuración en Supabase
+    const defaultMesasData = [
         {
             title: "MESA 1",
             guests: ["Ada López Osca", "Carlos Ibáñez López", "Miguel López Pardo", "Jose Maria Crespo", "Irene Sanchez", "Ignacio Miguel Muñoz Escanella", "Marina Estrada Fortes"]
@@ -392,6 +393,7 @@
             guests: ["Julia", "Alex", "Daniela", "Pilar hijo", "Emma"]
         }
     ];
+    let mesasData = [];
 
     function calcularDiasRestantes() {
         const fechaBoda = new Date('2026-10-08T00:00:00');
@@ -440,8 +442,65 @@
 
             calcularDiasRestantes();
             cargarInvitados();
+            cargarMesasSupabase(); // Carga las mesas desde Supabase
         } else {
             alert("Contraseña incorrecta ❌");
+        }
+    }
+
+    async function cargarMesasSupabase() {
+        if (!supabaseClient) return;
+        
+        const { data, error } = await supabaseClient
+            .from('organizacion_mesas')
+            .select('configuracion')
+            .eq('id', 1)
+            .single();
+        
+        if (error || !data || !data.configuracion) {
+            console.log("No se encontraron mesas en Supabase o hubo un error, usando por defecto");
+            mesasData = defaultMesasData;
+        } else {
+            mesasData = data.configuracion;
+        }
+        
+        // Refrescar el dibujo si estamos en la vista de mesas
+        if(!document.getElementById('vista-mesas').classList.contains('hidden')){
+            renderizarMesas();
+        }
+    }
+
+    async function guardarMesasSupabase() {
+        if (!supabaseClient) {
+            alert("Error: Supabase no está inicializado.");
+            return;
+        }
+
+        // Actualizar títulos actuales del DOM por si el usuario editó alguno sin perder el foco
+        document.querySelectorAll('.mesa-wrapper').forEach((wrapper, idx) => {
+            const titleEl = wrapper.querySelector('.mesa-title');
+            if (titleEl && mesasData[idx]) {
+                mesasData[idx].title = titleEl.textContent.trim();
+            }
+        });
+        
+        const btnGuardar = document.getElementById('btn-guardar-mesas');
+        const contenidoOriginalBtn = btnGuardar.innerHTML;
+        btnGuardar.innerHTML = '<i data-lucide="loader-2" class="w-4 h-4 animate-spin"></i> Guardando...';
+        btnGuardar.disabled = true;
+
+        const { data, error } = await supabaseClient
+            .from('organizacion_mesas')
+            .upsert({ id: 1, configuracion: mesasData });
+
+        btnGuardar.innerHTML = contenidoOriginalBtn;
+        btnGuardar.disabled = false;
+        lucide.createIcons();
+
+        if (error) {
+            alert("Error al guardar en Supabase: " + error.message);
+        } else {
+            alert("¡Configuración de mesas guardada correctamente en la nube! ✅");
         }
     }
 
@@ -487,18 +546,6 @@
         });
 
         renderizarMesas();
-    }
-
-    function guardarMesasLocal() {
-        // Actualizar títulos actuales del DOM por si el usuario editó alguno sin perder el foco
-        document.querySelectorAll('.mesa-wrapper').forEach((wrapper, idx) => {
-            const titleEl = wrapper.querySelector('.mesa-title');
-            if (titleEl && mesasData[idx]) {
-                mesasData[idx].title = titleEl.textContent.trim();
-            }
-        });
-        localStorage.setItem('boda_mesas_config', JSON.stringify(mesasData));
-        alert("¡Configuración de mesas guardada correctamente! ✅");
     }
 
     function crearNuevaMesa() {
