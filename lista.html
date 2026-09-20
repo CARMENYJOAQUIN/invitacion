@@ -40,31 +40,6 @@
             box-shadow: 0 14px 30px -5px rgba(0, 0, 0, 0.8);
         }
 
-        .card-mesa {
-            background: linear-gradient(135deg, #171717 0%, #0a0a0a 100%);
-            border: 1px solid rgba(255, 255, 255, 0.08);
-            border-radius: 1rem;
-            padding: 1.5rem;
-            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.7), 0 8px 10px -6px rgba(0, 0, 0, 0.7);
-            transition: all 0.3s ease;
-            width: 100%;
-        }
-        .card-mesa:hover {
-            border-color: rgba(255, 255, 255, 0.2);
-            transform: translateY(-2px);
-            box-shadow: 0 14px 30px -5px rgba(0, 0, 0, 0.8);
-        }
-        .guests-container {
-            max-height: 0;
-            overflow: hidden;
-            transition: max-height 0.3s ease-in-out, opacity 0.3s ease-in-out;
-            opacity: 0;
-        }
-        .guests-container.expanded {
-            max-height: 500px;
-            opacity: 1;
-        }
-
         /* Estilos para el panel deslizante en móvil */
         #mobile-sidebar {
             transition: transform 0.3s ease-in-out;
@@ -78,6 +53,25 @@
                 transform: translateX(0) !important;
             }
         }
+
+        /* Estilos para Mesas Redondas y Drag & Drop */
+        .mesa-wrapper { position: relative; width: 320px; height: 320px; margin: 2rem auto; border-radius: 50%; border: 2px dashed #333; background: radial-gradient(circle, #1a1a1a 0%, #050505 100%); transition: all 0.3s ease; display: flex; align-items: center; justify-content: center; box-shadow: inset 0 0 40px rgba(0,0,0,0.8); }
+        .mesa-wrapper.drag-over { border-color: #666; background: radial-gradient(circle, #2a2a2a 0%, #111 100%); transform: scale(1.02); }
+        .mesa-title { position: absolute; font-weight: 700; font-size: 1.1rem; color: #fff; text-align: center; outline: none; padding: 0.5rem; min-width: 100px; z-index: 5; text-shadow: 0 2px 4px rgba(0,0,0,0.8); cursor: text; border-radius: 6px; transition: background 0.2s; }
+        .mesa-title:hover { background: rgba(255, 255, 255, 0.05); }
+        
+        .guest-circle { position: absolute; width: 44px; height: 44px; border-radius: 50%; background: linear-gradient(135deg, #2a2a2a 0%, #111 100%); border: 2px solid #555; display: flex; align-items: center; justify-content: center; cursor: grab; transform: translate(-50%, -50%); transition: border-color 0.2s; user-select: none; box-shadow: 0 4px 6px rgba(0,0,0,0.5); z-index: 10; }
+        .guest-circle:hover { border-color: #888; z-index: 15; }
+        .guest-circle.dragging { opacity: 0.5; cursor: grabbing; border-color: #fff; transform: translate(-50%, -50%) scale(1.1); }
+        .guest-circle .initials { font-size: 0.8rem; font-weight: 700; color: #eee; pointer-events: none; }
+        .guest-circle .guest-name { position: absolute; top: 48px; font-size: 0.65rem; color: #bbb; white-space: nowrap; pointer-events: none; text-shadow: 0 1px 3px #000; text-align: center; line-height: 1.2; font-weight: 500; }
+        
+        /* Estilos para Botones de Grupo (G, S, A) */
+        .group-btn { width: 26px; height: 26px; border-radius: 6px; display: inline-flex; align-items: center; justify-content: center; font-size: 0.75rem; font-weight: bold; cursor: pointer; transition: all 0.2s; border: 1px solid transparent; background: rgba(255, 255, 255, 0.05); color: #737373; border-color: #262626; }
+        .group-btn:hover { background: rgba(255, 255, 255, 0.1); }
+        .group-btn.active.G { background: rgba(16, 185, 129, 0.15); color: #34d399; border-color: #059669; }
+        .group-btn.active.S { background: rgba(59, 130, 246, 0.15); color: #60a5fa; border-color: #2563eb; }
+        .group-btn.active.A { background: rgba(139, 92, 246, 0.15); color: #c084fc; border-color: #7c3aed; }
     </style>
 </head>
 <body class="bg-black text-white h-screen overflow-hidden transition-colors duration-200">
@@ -279,21 +273,34 @@
                                 <thead>
                                     <tr class="bg-black/80 border-b border-neutral-800 text-[11px] font-bold text-neutral-500 uppercase tracking-wider">
                                         <th class="py-3 px-6">Invitado / Acompañante</th>
+                                        <th class="py-3 px-6">Grupo</th>
                                         <th class="py-3 px-6">Tipo</th>
                                         <th class="py-3 px-6">Menú</th>
                                         <th class="py-3 px-6">Precio</th>
+                                        <th class="py-3 px-6 text-right">Acciones</th>
                                     </tr>
                                 </thead>
                                 <tbody id="tabla-cuerpo" class="divide-y divide-neutral-800/60 text-sm text-neutral-300">
-                                    </tbody>
+                                </tbody>
                             </table>
                         </div>
                     </div>
                 </div>
 
                 <div id="vista-mesas" class="hidden space-y-6">
-                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6" id="mesas-container">
+                    <div class="flex items-center justify-between bg-neutral-900/40 p-4 rounded-xl border border-neutral-800/80 shadow-inner">
+                        <div class="flex items-center gap-3">
+                            <div class="w-8 h-8 rounded-lg bg-neutral-800 text-neutral-300 flex items-center justify-center shadow-sm border border-neutral-700">
+                                <i data-lucide="move" class="w-4 h-4"></i>
+                            </div>
+                            <div>
+                                <h3 class="font-bold text-white text-sm">Distribución de Mesas Redondas</h3>
+                                <p class="text-xs text-neutral-400 mt-0.5">Arrastra los círculos de invitados de una mesa a otra. Haz clic en el nombre de la mesa para editarlo.</p>
+                            </div>
                         </div>
+                    </div>
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 py-4" id="mesas-container">
+                    </div>
                 </div>
 
             </main>
@@ -307,6 +314,7 @@
 
     let supabaseClient = null;
     let listaGlobalDatos = [];
+    let listaAsistentesLocal = [];
     let filtroActual = 'todos';
 
     const gruposListas = {
@@ -321,8 +329,8 @@
         ],
         "Familia Joaquin Gimenez": [
             "Fernando Gimenez", "Lucia Asensio", "Lola González Guillén", "M. Pilar Forte López", 
-            "Fernando González Guillen", "Pilar Gonzalez Forte", "Benjamín", "Miguel González Forte", 
-            "María Viciana Segura", "Pedro Jesús Fernández González", "Joaquin Gimenez Gonzalez", 
+            "Fernando González Guillen", "Pilar Gonzalez Forte", "Benjamín", "Fernando Gonzalez Forte", 
+            "Pedro Jesús Fernández González", "Joaquin Gimenez Gonzalez", 
             "Presentación González Guillén", "Ana Belén Gimenez Gonzalez", "David Rubira Moreno", 
             "Natalia Rubira Gimenez", "Belén Rubira Gimenez"
         ]
@@ -331,32 +339,26 @@
     const mesasData = [
         {
             title: "MESA 1",
-            description: "7 Personas asignadas a esta mesa.",
             guests: ["Ada López Osca", "Carlos Ibáñez López", "Miguel López Pardo", "Jose Maria Crespo", "Irene Sanchez", "Ignacio Miguel Muñoz Escanella", "Marina Estrada Fortes"]
         },
         {
             title: "MESA 2",
-            description: "6 Personas asignadas a esta mesa.",
             guests: ["Joaquin Gimenez Gonzalez", "Carmen Soler Rodriguez", "Ramón Soler Mariño", "Carmen Rodríguez Magaña", "Presentación González Guillén", "Tatá"]
         },
         {
             title: "MESA 3",
-            description: "9 Personas asignadas a esta mesa.",
             guests: ["Isabel Tita", "Abuelo", "Abuela", "Caridad Bermejo Valero", "Mari Ángeles Rodríguez", "Daniel Soler Mariño", "José Luis Saldaña Rodríguez", "Thais Soler Rodriguez", "Ernesto Jover Sánchez"]
         },
         {
             title: "MESA 4",
-            description: "6 Personas asignadas a esta mesa.",
-            guests: ["M. Pilar Forte López", "Fernando González Guillen", "Pilar Forte", "Benjamín", "Miguel González Forte", "María Viciana Segura"]
+            guests: ["M. Pilar Forte López", "Fernando González Guillen", "Pilar Forte", "Benjamín", "Fernando Gonzalez Forte"]
         },
         {
             title: "MESA 5",
-            description: "7 Personas asignadas a esta mesa.",
             guests: ["Fernando Gimenez", "Lucia Asensio", "David Rubira Moreno", "Natalia Rubira Gimenez", "Belén Rubira Gimenez", "Pedro Jesús Fernández González", "Ana hermana"]
         },
         {
             title: "MESA NIÑOS",
-            description: "5 Personas asignadas a esta mesa.",
             guests: ["Julia", "Alex", "Daniela", "Pilar hijo", "Emma"]
         }
     ];
@@ -408,7 +410,6 @@
 
             calcularDiasRestantes();
             cargarInvitados();
-            renderizarMesas();
         } else {
             alert("Contraseña incorrecta ❌");
         }
@@ -454,67 +455,126 @@
             a.classList.add('bg-gradient-to-r', 'from-neutral-900', 'to-neutral-900/40', 'border', 'border-neutral-800/60', 'text-white', 'font-semibold', 'shadow-sm');
             a.classList.remove('text-neutral-400', 'font-medium');
         });
+
+        renderizarMesas();
     }
+
+    let draggedGuest = null;
 
     function renderizarMesas() {
         const container = document.getElementById('mesas-container');
-        container.innerHTML = mesasData.map((mesa, index) => {
-            const guestsListHTML = mesa.guests.map(g => `
-                <li class="text-sm text-neutral-300 flex items-center gap-2 py-1.5 border-b border-neutral-800/60 last:border-0">
-                    <span class="w-1.5 h-1.5 rounded-full bg-neutral-400"></span>
-                    ${g}
-                </li>
-            `).join('');
+        container.innerHTML = '';
 
-            return `
-            <div class="card-mesa" id="card-mesa-${index}">
-                <div class="flex justify-end mb-[-0.5rem]">
-                    <i data-lucide="x" class="w-4 h-4 text-neutral-500 hover:text-white cursor-pointer transition-colors" onclick="handleCloseMesa(${index})"></i>
-                </div>
-                <div class="flex gap-4 items-start">
-                    <i data-lucide="check-circle" class="w-6 h-6 text-neutral-200 shrink-0 mt-0.5"></i>
-                    <div class="w-full">
-                        <h3 class="font-semibold text-lg text-white mb-1">${mesa.title}</h3>
-                        <p class="text-sm text-neutral-400 mb-4">${mesa.description}</p>
-                        
-                        <div class="guests-container" id="guests-${index}">
-                            <div class="bg-black/60 rounded-xl p-3 border border-neutral-800/80 mt-2 shadow-inner">
-                                <span class="text-xs font-bold uppercase tracking-wider text-neutral-400 block mb-2">Comensales</span>
-                                <ul class="space-y-1">
-                                    ${guestsListHTML}
-                                </ul>
-                            </div>
-                        </div>
-                    </div>
-                </div>
+        mesasData.forEach((mesa, mIndex) => {
+            const mesaWrapper = document.createElement('div');
+            mesaWrapper.className = 'mesa-wrapper';
+            mesaWrapper.dataset.mesaIndex = mIndex;
+            
+            mesaWrapper.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                e.dataTransfer.dropEffect = 'move';
+            });
+            mesaWrapper.addEventListener('dragenter', (e) => {
+                e.preventDefault();
+                mesaWrapper.classList.add('drag-over');
+            });
+            mesaWrapper.addEventListener('dragleave', (e) => {
+                mesaWrapper.classList.remove('drag-over');
+            });
+            mesaWrapper.addEventListener('drop', handleDropOnMesa);
+
+            const title = document.createElement('div');
+            title.className = 'mesa-title';
+            title.contentEditable = true;
+            title.textContent = mesa.title;
+            title.addEventListener('blur', (e) => {
+                mesasData[mIndex].title = e.target.textContent;
+            });
+            title.addEventListener('mousedown', e => e.stopPropagation());
+            mesaWrapper.appendChild(title);
+
+            const numGuests = mesa.guests.length;
+            const radius = 120; 
+            const center = 160; 
+
+            mesa.guests.forEach((guestName, gIndex) => {
+                const angle = (gIndex / numGuests) * 2 * Math.PI - Math.PI / 2;
+                const x = center + radius * Math.cos(angle);
+                const y = center + radius * Math.sin(angle);
+
+                const guestEl = document.createElement('div');
+                guestEl.className = 'guest-circle';
+                guestEl.draggable = true;
+                guestEl.style.left = `${x}px`;
+                guestEl.style.top = `${y}px`;
+                guestEl.dataset.mesaIndex = mIndex;
+                guestEl.dataset.guestIndex = gIndex;
+
+                guestEl.addEventListener('dragstart', handleDragStartGuest);
+                guestEl.addEventListener('dragend', handleDragEndGuest);
+
+                const words = guestName.trim().split(' ').filter(w => w.length > 0);
+                let initials = "";
+                if(words.length >= 2) {
+                    initials = (words[0][0] + words[1][0]).toUpperCase();
+                } else if(words.length === 1) {
+                    initials = words[0].substring(0, 2).toUpperCase();
+                }
                 
-                <div class="flex items-center gap-3 mt-4 pt-4 border-t border-neutral-800/60">
-                    <a href="#" class="bg-gradient-to-r from-white to-neutral-200 hover:from-neutral-200 hover:to-neutral-300 text-black px-4 py-2.5 rounded-xl text-sm font-semibold text-center flex-1 transition-all shadow-md block" onclick="toggleGuests(event, ${index})">Mostrar comensales</a>
-                </div>
-            </div>
-            `;
-        }).join('');
+                const initialsEl = document.createElement('span');
+                initialsEl.className = 'initials';
+                initialsEl.textContent = initials;
+                guestEl.appendChild(initialsEl);
+
+                const shortName = words.length > 1 ? `${words[0]} ${words[1]}` : words[0] || "";
+                const nameEl = document.createElement('div');
+                nameEl.className = 'guest-name';
+                nameEl.textContent = shortName;
+                guestEl.appendChild(nameEl);
+
+                mesaWrapper.appendChild(guestEl);
+            });
+
+            container.appendChild(mesaWrapper);
+        });
         lucide.createIcons();
     }
 
-    function toggleGuests(event, index) {
-        event.preventDefault();
-        const guestsDiv = document.getElementById(`guests-${index}`);
-        const btn = event.currentTarget;
-        
-        if (guestsDiv.classList.contains('expanded')) {
-            guestsDiv.classList.remove('expanded');
-            btn.textContent = 'Mostrar comensales';
-        } else {
-            guestsDiv.classList.add('expanded');
-            btn.textContent = 'Ocultar comensales';
-        }
+    function handleDragStartGuest(e) {
+        draggedGuest = {
+            mesaIndex: parseInt(e.currentTarget.dataset.mesaIndex),
+            guestIndex: parseInt(e.currentTarget.dataset.guestIndex)
+        };
+        e.dataTransfer.effectAllowed = 'move';
+        setTimeout(() => e.currentTarget.classList.add('dragging'), 0);
     }
 
-    function handleCloseMesa(index) {
-        const card = document.getElementById(`card-mesa-${index}`);
-        card.style.opacity = '0';
-        setTimeout(() => card.style.display = 'none', 300);
+    function handleDragEndGuest(e) {
+        e.currentTarget.classList.remove('dragging');
+        document.querySelectorAll('.mesa-wrapper').forEach(m => m.classList.remove('drag-over'));
+    }
+
+    function handleDropOnMesa(e) {
+        e.preventDefault();
+        e.currentTarget.classList.remove('drag-over');
+        
+        if (!draggedGuest) return;
+
+        const targetMesaIndex = parseInt(e.currentTarget.dataset.mesaIndex);
+        
+        if (targetMesaIndex === draggedGuest.mesaIndex) {
+            draggedGuest = null;
+            return;
+        }
+
+        const originMesa = mesasData[draggedGuest.mesaIndex];
+        const targetMesa = mesasData[targetMesaIndex];
+        
+        const guestName = originMesa.guests.splice(draggedGuest.guestIndex, 1)[0];
+        targetMesa.guests.push(guestName);
+
+        draggedGuest = null;
+        renderizarMesas();
     }
 
     function obtenerGrupoAsistente(nombre, grupoPrincipalPorDefecto) {
@@ -531,7 +591,7 @@
     async function cargarInvitados() {
         if (!supabaseClient) return;
         const cuerpo = document.getElementById('tabla-cuerpo');
-        cuerpo.innerHTML = `<tr><td colspan="4" class="text-center py-8 text-neutral-500 animate-pulse">Cargando invitados...</td></tr>`;
+        cuerpo.innerHTML = `<tr><td colspan="6" class="text-center py-8 text-neutral-500 animate-pulse">Cargando invitados...</td></tr>`;
         const { data, error } = await supabaseClient
             .from('asistencias')
             .select('*')
@@ -542,11 +602,13 @@
         }
 
         listaGlobalDatos = data || [];
+        listaAsistentesLocal = obtenerListaAsistentesProcesada();
         renderizarTablaYEstadisticas();
     }
 
     function obtenerListaAsistentesProcesada() {
         let asistentes = [];
+        let idCounter = 1;
         listaGlobalDatos.forEach(item => {
             let grupoPrincipal = 'Amigos';
             const principalLimpio = normalizarTexto(item.invitado_principal);
@@ -558,6 +620,7 @@
             }
 
             asistentes.push({
+                id: idCounter++,
                 nombre: item.invitado_principal,
                 tipo: 'Adulto',
                 menu: item.menu_principal || '-',
@@ -568,6 +631,7 @@
             if (item.acompanante && item.acompanante !== 'Ninguno' && item.acompanante.trim() !== '') {
                 let grupoAcompañante = obtenerGrupoAsistente(item.acompanante, grupoPrincipal);
                 asistentes.push({
+                    id: idCounter++,
                     nombre: item.acompanante,
                     tipo: 'Adulto',
                     menu: item.menu_acompanante || '-',
@@ -580,6 +644,7 @@
             if (numNinos > 0) {
                 for (let i = 1; i <= numNinos; i++) {
                     asistentes.push({
+                        id: idCounter++,
                         nombre: `Niño/a de ${item.invitado_principal} (${i})`,
                         tipo: 'Niño',
                         menu: 'Menú Infantil',
@@ -593,9 +658,21 @@
     }
 
     function getAsistentesFiltrados() {
-        const todos = obtenerListaAsistentesProcesada();
-        if (filtroActual === 'todos') return todos;
-        return todos.filter(a => a.grupo === filtroActual);
+        if (filtroActual === 'todos') return listaAsistentesLocal;
+        return listaAsistentesLocal.filter(a => a.grupo === filtroActual);
+    }
+
+    function cambiarGrupoAsistente(id, nuevoGrupo) {
+        const asis = listaAsistentesLocal.find(a => a.id === id);
+        if(asis) {
+            asis.grupo = nuevoGrupo;
+            renderizarTablaYEstadisticas();
+        }
+    }
+
+    function eliminarAsistente(id) {
+        listaAsistentesLocal = listaAsistentesLocal.filter(a => a.id !== id);
+        renderizarTablaYEstadisticas();
     }
 
     function calcularTotalesGenerales() {
@@ -635,7 +712,7 @@
         const filasProcesadas = getAsistentesFiltrados();
         const totales = calcularTotalesGenerales();
         if (filasProcesadas.length === 0) {
-            cuerpo.innerHTML = `<tr><td colspan="4" class="text-center py-8 text-neutral-500">No hay confirmaciones en este grupo.</td></tr>`;
+            cuerpo.innerHTML = `<tr><td colspan="6" class="text-center py-8 text-neutral-500">No hay confirmaciones en este grupo.</td></tr>`;
             document.getElementById('stat-adultos').innerText = 0;
             document.getElementById('stat-ninos').innerText = 0;
             document.getElementById('stat-carne').innerText = 0;
@@ -653,12 +730,24 @@
             tr.innerHTML = `
                 <td class="py-3 px-6 font-medium text-white">${row.nombre}</td>
                 <td class="py-3 px-6">
+                    <div class="flex items-center gap-1.5">
+                        <button onclick="cambiarGrupoAsistente(${row.id}, 'Familia Joaquin Gimenez')" class="group-btn ${row.grupo === 'Familia Joaquin Gimenez' ? 'active G' : ''}" title="Familia Joaquín Giménez">G</button>
+                        <button onclick="cambiarGrupoAsistente(${row.id}, 'Familia Carmen Soler')" class="group-btn ${row.grupo === 'Familia Carmen Soler' ? 'active S' : ''}" title="Familia Carmen Soler">S</button>
+                        <button onclick="cambiarGrupoAsistente(${row.id}, 'Amigos')" class="group-btn ${row.grupo === 'Amigos' ? 'active A' : ''}" title="Amigos">A</button>
+                    </div>
+                </td>
+                <td class="py-3 px-6">
                     <span class="px-2.5 py-0.5 rounded-md text-xs font-semibold bg-neutral-900 text-neutral-300 border border-neutral-800">${row.tipo}</span>
                 </td>
                 <td class="py-3 px-6">
                     <span class="px-2.5 py-0.5 rounded-md text-xs font-semibold bg-neutral-900 text-neutral-300 border border-neutral-800">${row.menu}</span>
                 </td>
                 <td class="py-3 px-6 font-semibold text-white">${row.precio} €</td>
+                <td class="py-3 px-6 text-right">
+                    <button onclick="eliminarAsistente(${row.id})" class="p-1.5 bg-red-900/10 text-red-500 hover:bg-red-900/40 rounded-lg transition-colors border border-red-900/30" title="Eliminar Invitado">
+                        <i data-lucide="trash-2" class="w-4 h-4"></i>
+                    </button>
+                </td>
             `;
             cuerpo.appendChild(tr);
         });
@@ -684,11 +773,12 @@
 
         const totales = calcularTotalesGenerales();
         let datosExcel = [];
-        datosExcel.push({ "Invitado / Acompañante": `BODA CARMEN Y JOAQUÍN - ${filtroActual.toUpperCase()}`, "Tipo": "", "Menú": "", "Precio": "" });
-        datosExcel.push({ "Invitado / Acompañante": `Fecha de exportación: ${new Date().toLocaleDateString()}`, "Tipo": "", "Menú": "", "Precio": "" });
+        datosExcel.push({ "Invitado / Acompañante": `BODA CARMEN Y JOAQUÍN - ${filtroActual.toUpperCase()}`, "Grupo": "", "Tipo": "", "Menú": "", "Precio": "" });
+        datosExcel.push({ "Invitado / Acompañante": `Fecha de exportación: ${new Date().toLocaleDateString()}`, "Grupo": "", "Tipo": "", "Menú": "", "Precio": "" });
         datosExcel.push({});
         datosExcel.push({ 
             "Invitado / Acompañante": "NOMBRE DEL INVITADO / ACOMPAÑANTE", 
+            "Grupo": "GRUPO",
             "Tipo": "TIPO ASISTENTE", 
             "Menú": "MENÚ SELECCIONADO", 
             "Precio": "PRECIO UNITARIO" 
@@ -696,6 +786,7 @@
         filasProcesadas.forEach(row => {
             datosExcel.push({
                 "Invitado / Acompañante": row.nombre,
+                "Grupo": row.grupo,
                 "Tipo": row.tipo,
                 "Menú": row.menu,
                 "Precio": row.precio
@@ -703,15 +794,16 @@
         });
 
         datosExcel.push({});
-        datosExcel.push({ "Invitado / Acompañante": "=== RESUMEN DE TOTALES Y PRESUPUESTO ===", "Tipo": "", "Menú": "", "Precio": "" });
-        datosExcel.push({ "Invitado / Acompañante": `Total Adultos (${totales.totalAdultos} personas)`, "Tipo": "", "Menú": "", "Precio": totales.costeAdultos });
-        datosExcel.push({ "Invitado / Acompañante": `Total Niños (${totales.totalNinos} personas)`, "Tipo": "", "Menú": "", "Precio": totales.costeNinos });
-        datosExcel.push({ "Invitado / Acompañante": `Desglose Menús: ${totales.totalCarne} Carne | ${totales.totalPescado} Pescado`, "Tipo": "", "Menú": "", "Precio": "" });
-        datosExcel.push({ "Invitado / Acompañante": "SUBTOTAL GRUPO", "Tipo": "", "Menú": "", "Precio": totales.subtotalSinAdelanto });
+        datosExcel.push({ "Invitado / Acompañante": "=== RESUMEN DE TOTALES Y PRESUPUESTO ===", "Grupo": "", "Tipo": "", "Menú": "", "Precio": "" });
+        datosExcel.push({ "Invitado / Acompañante": `Total Adultos (${totales.totalAdultos} personas)`, "Grupo": "", "Tipo": "", "Menú": "", "Precio": totales.costeAdultos });
+        datosExcel.push({ "Invitado / Acompañante": `Total Niños (${totales.totalNinos} personas)`, "Grupo": "", "Tipo": "", "Menú": "", "Precio": totales.costeNinos });
+        datosExcel.push({ "Invitado / Acompañante": `Desglose Menús: ${totales.totalCarne} Carne | ${totales.totalPescado} Pescado`, "Grupo": "", "Tipo": "", "Menú": "", "Precio": "" });
+        datosExcel.push({ "Invitado / Acompañante": "SUBTOTAL GRUPO", "Grupo": "", "Tipo": "", "Menú": "", "Precio": totales.subtotalSinAdelanto });
         const worksheet = XLSX.utils.json_to_sheet(datosExcel, { skipHeader: true });
 
         worksheet['!cols'] = [
             { wch: 42 },
+            { wch: 25 },
             { wch: 22 },
             { wch: 25 },
             { wch: 18 }
@@ -732,7 +824,7 @@
         const totales = calcularTotalesGenerales();
         let filasPdf = [];
         filasProcesadas.forEach(row => {
-            filasPdf.push([row.nombre, row.tipo, row.menu, `${row.precio} €`]);
+            filasPdf.push([row.nombre, row.grupo, row.tipo, row.menu, `${row.precio} €`]);
         });
         const alturaTituloyEspacios = 80;
         const alturaPorFila = 8;
@@ -756,7 +848,7 @@
 
         doc.autoTable({
             startY: 19,
-            head: [['Invitado / Acompañante', 'Tipo', 'Menú', 'Precio']],
+            head: [['Invitado / Acompañante', 'Grupo', 'Tipo', 'Menú', 'Precio']],
             body: filasPdf,
             theme: 'striped',
             headStyles: { fillColor: [30, 30, 30], fontSize: 8, fontStyle: 'bold', cellPadding: 2 },
